@@ -15,7 +15,6 @@ import org.json.simple.parser.ParseException;
 
 public class TCPClient
 {
-//	static String myRoom = "";
 	public static void main(String args[])
 	{	
 		Socket socket = null;
@@ -30,19 +29,9 @@ public class TCPClient
 			
 			while (true)
 			{
-//				DataInputStream in = new DataInputStream(socket.getInputStream());
 				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-							
-				//String data = in.readUTF(); //read line of data from the stream
-				//System.out.println("Received: " + data); 
-								
-//				ReceiveMessage receivedMessage = new ReceiveMessage(socket);
-//				String decodedMessage = decodeJsonMessage(in.readUTF()); //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
-//				SetPrompt(decodedMessage);
-//				System.out.println("Decoded Message received: " + decodedMessage);
-							
-				System.out.println("Sending data...");
-//				out.writeUTF(encodeJsonMessage(args[0])); //TODO: GET DATA FROM STDIO INSTEAD OF PASSING DATA FROM PROGRAM CALL			
+													
+				System.out.println("Sending data...");	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in));
 				out.writeUTF(encodeJsonMessage(consoleInput.readLine()));
 			}
@@ -107,25 +96,19 @@ class ReceiveMessage extends Thread
 	{
 		socket = aClientSocket;
 
-//		while (true)
-//		{
-			try {
-				in = new DataInputStream(socket.getInputStream());
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-//		}
+		try {
+			in = new DataInputStream(socket.getInputStream());
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 	}
 		
 	public void run()
 	{
-//		this.start();
-		
-//		String decodedMessage = null;
 		while (true)
 		{
-			System.out.println("Waiting to receive message");
+			System.out.println("Waiting to receive message...");
 			try {
 				String decodedMessage = decodeJsonMessage(in.readUTF());
 				System.out.println("Decoded Message received: " + decodedMessage);
@@ -140,7 +123,6 @@ class ReceiveMessage extends Thread
 	public static String decodeJsonMessage(String jsonString)
 	{	
 		String value = null;
-		
 		
 		JSONParser parser = new JSONParser();
 		ContainerFactory containerFactory = new ContainerFactory()

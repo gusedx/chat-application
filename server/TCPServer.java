@@ -170,11 +170,7 @@ class Connection extends Thread
 			clientSocket = aClientSocket;
 			in = new DataInputStream(clientSocket.getInputStream());
 			out = new DataOutputStream(clientSocket.getOutputStream());
-			
-			//BufferedReader in = new BufferedReader( new InputStreamReader(clientSocket.getInputStream()));
-			
-			//System.out.println("Message received: " + in.readUTF()); //OK (GETS JSON STRING FINE). COMMENTED OUT TO TEST JSON DECODING BELOW
-			
+						
 			this.start();
 			
 			while (true)
@@ -184,8 +180,6 @@ class Connection extends Thread
 				//String decodedMessage = decodeJsonMessage(in.readLine());
 				
 				System.out.println("Decoded Message received: " + decodedMessage);
-				
-//				this.start();	
 			}
 		}
 		catch (EOFException e)
