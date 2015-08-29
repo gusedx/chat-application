@@ -29,7 +29,7 @@ public class TCPClient
 				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 				
 				//String data = in.readUTF(); //read line of data from the stream
-				//System.out.println("Received: " + data);
+				//System.out.println("Received: " + data); 
 				
 				//TODO: SEE WHY I'M NOT GETTING ROOMCONTENTS MESSAGE FROM SERVER (ONLY GETTING NEWID MESSAGE). NEED THREADING AND/OR LOOP IN CLIENT?
 				
