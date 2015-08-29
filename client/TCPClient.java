@@ -1,6 +1,7 @@
 package comp90015.project1.gustavo.client;
 
 import java.net.*;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -14,6 +15,7 @@ import org.json.simple.parser.ParseException;
 
 public class TCPClient
 {
+	static String myRoom = "";
 	public static void main(String args[])
 	{	
 		Socket socket = null;
@@ -116,8 +118,34 @@ public class TCPClient
 			switch(type)
 			{
 				case "newidentity":
-					key = "identity"; //TODO: CALL SETPROMPT FUNCTION FROM HERE? OR HAVE A ACTION FUNCTION GETTING THE VALUE RETURNED FROM HERE AND SWITCH RETURN VALUE TO DETERMINE ACTION TO TAKE?
+					key = "identity";
 					break;
+					
+				case "roomcontents":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					myRoom = value;
+					
+					key = "identities";
+					String guests = "";
+					String guest;
+					String owner = "";
+					List guestList = (List) json.getOrDefault(key, null);
+					key = "owner";
+					owner = json.getOrDefault(key, null).toString();
+					for (int i = 0; i < guestList.size(); i++)
+					{
+						guest = guestList.get(i).toString();
+						guests = guests + " " + guest;
+						if (guest == owner)
+						{
+							guests = guests + "*";
+						}
+					}
+					System.out.println(myRoom + " contains " + guests);
+					
+					break;
+					
 				default:
 					System.out.println("Invalid message type " + type);
 					//TODO: ADD ERROR HANDLING
