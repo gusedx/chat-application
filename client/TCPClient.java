@@ -15,7 +15,7 @@ import org.json.simple.parser.ParseException;
 
 public class TCPClient
 {
-	static String myRoom = "";
+//	static String myRoom = "";
 	public static void main(String args[])
 	{	
 		Socket socket = null;
@@ -25,22 +25,26 @@ public class TCPClient
 			socket = new Socket(args[1], serverPort);
 			System.out.println("Connection Established");
 			
+			ReceiveMessage receivedMessage = new ReceiveMessage(socket);
+			receivedMessage.start();
+			
 			while (true)
 			{
-				DataInputStream in = new DataInputStream(socket.getInputStream());
+//				DataInputStream in = new DataInputStream(socket.getInputStream());
 				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-				
+							
 				//String data = in.readUTF(); //read line of data from the stream
 				//System.out.println("Received: " + data); 
-				
-				//TODO: SEE WHY I'M NOT GETTING ROOMCONTENTS MESSAGE FROM SERVER (ONLY GETTING NEWID MESSAGE). NEED THREADING AND/OR LOOP IN CLIENT?
-				
-				String decodedMessage = decodeJsonMessage(in.readUTF()); //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
-				SetPrompt(decodedMessage);
-				System.out.println("Decoded Message received: " + decodedMessage);
+								
+//				ReceiveMessage receivedMessage = new ReceiveMessage(socket);
+//				String decodedMessage = decodeJsonMessage(in.readUTF()); //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
+//				SetPrompt(decodedMessage);
+//				System.out.println("Decoded Message received: " + decodedMessage);
 							
 				System.out.println("Sending data...");
-				out.writeUTF(encodeJsonMessage(args[0])); //TODO: GET DATA FROM STDIO INSTEAD OF PASSING DATA FROM PROGRAM CALL
+//				out.writeUTF(encodeJsonMessage(args[0])); //TODO: GET DATA FROM STDIO INSTEAD OF PASSING DATA FROM PROGRAM CALL			
+				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in));
+				out.writeUTF(encodeJsonMessage(consoleInput.readLine()));
 			}
 		}
 		catch (UnknownHostException e)
@@ -85,6 +89,52 @@ public class TCPClient
 		System.out.println(jsonText);
 		
 		return jsonText;
+	}
+	
+	public static void SetPrompt(String guestId)
+	{
+		
+	}
+}
+
+class ReceiveMessage extends Thread
+{
+	static String myRoom = "";
+	Socket socket = null;
+	DataInputStream in;
+	
+	ReceiveMessage(Socket aClientSocket) throws IOException
+	{
+		socket = aClientSocket;
+
+//		while (true)
+//		{
+			try {
+				in = new DataInputStream(socket.getInputStream());
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+//		}
+	}
+		
+	public void run()
+	{
+//		this.start();
+		
+//		String decodedMessage = null;
+		while (true)
+		{
+			System.out.println("Waiting to receive message");
+			try {
+				String decodedMessage = decodeJsonMessage(in.readUTF());
+				System.out.println("Decoded Message received: " + decodedMessage);
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
+			//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
+		}
 	}
 	
 	public static String decodeJsonMessage(String jsonString)
@@ -159,18 +209,5 @@ public class TCPClient
 		}
 		
 		return value;
-	}
-	
-	public static void SetPrompt(String guestId)
-	{
-		
-	}
-}
-
-class ReceiveMessage extends Thread
-{
-	ReceiveMessage(Socket aClientSocket)
-	{
-		this.start();
 	}
 }
