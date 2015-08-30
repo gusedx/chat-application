@@ -22,13 +22,20 @@ public class TCPServer
 		
 		try{
 			int serverPort = 4444; //default server port
+			
+			if (args.length > 0)
+			{
+				serverPort = Integer.parseInt(args[0]);
+			}
 
 			ServerSocket listenSocket = new ServerSocket(serverPort); 
 			
 			while (true)
 			{
-				System.out.println("Server listening for a connection"); //TODO: DEBUG ONLY
+				System.out.println("Server listening for a connection on port " + serverPort); //TODO: DEBUG ONLY
+
 				Socket clientSocket = listenSocket.accept();
+
 				guestCount++;
 				guestId = "guest" + guestCount;
 				System.out.println("Received connection from " + guestId);
@@ -43,11 +50,17 @@ public class TCPServer
 				//TODO: SEND ROOMLIST MESSAGE TO CLIENT
 				
 				Connection connection = new Connection(clientSocket);
+//				connection.start();
+				System.out.println("New connection thread started, will start listening loop again...");
 			}
 		}
 		catch (IOException e)
 		{
 			System.out.println("Listen socket:" + e.getMessage());
+		}
+		catch (Exception e)
+		{
+			System.out.println("Exception: " + e.getMessage());
 		}
 	}
 	

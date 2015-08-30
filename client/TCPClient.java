@@ -21,7 +21,17 @@ public class TCPClient
 		try
 		{
 			int serverPort = 4444;
-			socket = new Socket(args[1], serverPort);
+			if (args.length > 1)
+			{
+				serverPort = Integer.parseInt(args[1]);
+			}
+			
+			System.out.println("Attempting to connect to host " + args[0] + " on port " + serverPort);
+			
+			//socket = new Socket(args[0], serverPort);
+			socket = new Socket();
+//			System.out.println("Client local port: " + socket.getLocalPort());
+			socket.connect(new InetSocketAddress(args[0], serverPort), 10000);
 			System.out.println("Connection Established");
 			
 			ReceiveMessage receivedMessage = new ReceiveMessage(socket);
