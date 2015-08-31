@@ -35,7 +35,7 @@ public class TCPClient
 			System.out.println("Connection Established");
 			
 			ReceiveMessage receivedMessage = new ReceiveMessage(socket);
-			receivedMessage.start();
+//			receivedMessage.start();
 			
 			while (true)
 			{
@@ -105,22 +105,46 @@ class ReceiveMessage extends Thread
 	ReceiveMessage(Socket aClientSocket) throws IOException
 	{
 		socket = aClientSocket;
+		System.out.println("Starting new client receive message thread...");
+		start();
+		System.out.println("New client receive message thread started.");
+		
+//		while (true)
+//		{
+//			System.out.println("Waiting to receive message...");
+//			try {
+//				in = new DataInputStream(socket.getInputStream());
+//				String jsonString = in.readUTF();
+//				String decodedMessage = decodeJsonMessage(jsonString);
+////				this.start();
+//				System.out.println("Decoded Message received: " + decodedMessage);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
+//			//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
+//		}
 
-		try {
+		
+/*		try {
 			in = new DataInputStream(socket.getInputStream());
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		}
+		}*/
 	}
 		
 	public void run()
 	{
+		System.out.println("In run method...");
 		while (true)
 		{
 			System.out.println("Waiting to receive message...");
 			try {
-				String decodedMessage = decodeJsonMessage(in.readUTF());
+				in = new DataInputStream(socket.getInputStream());
+				String jsonString = in.readUTF();
+				String decodedMessage = decodeJsonMessage(jsonString);
+//				this.start();
 				System.out.println("Decoded Message received: " + decodedMessage);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
