@@ -50,7 +50,6 @@ public class TCPServer
 				//TODO: SEND ROOMLIST MESSAGE TO CLIENT
 				
 				new Connection(clientSocket);
-//				connection.start();
 				System.out.println("New connection thread started, will start listening loop again...");
 			}
 		}
@@ -187,38 +186,6 @@ class Connection extends Thread
 			System.out.println("Starting new server thread...");
 			this.start();
 			System.out.println("New server thread started.");
-			
-//			String decodedMessage = null;
-//			
-//			System.out.println("Waiting for encoded JSON message...");
-//			
-//			try {
-//				in = new DataInputStream(clientSocket.getInputStream());
-//				decodedMessage = decodeJsonMessage(in.readUTF());
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			}
-//			
-//			//String decodedMessage = decodeJsonMessage(in.readLine());
-//			
-//			System.out.println("Decoded Message received: " + decodedMessage);
-			
-/*			while (true)
-			{
-				String decodedMessage = null;
-				System.out.println("Waiting for encoded JSON message...");
-				try {
-					decodedMessage = decodeJsonMessage(in.readUTF());
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				
-				//String decodedMessage = decodeJsonMessage(in.readLine());
-				
-				System.out.println("Decoded Message received: " + decodedMessage);
-			}*/
 		}
 		finally
 		{
@@ -250,8 +217,6 @@ class Connection extends Thread
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			
-			//String decodedMessage = decodeJsonMessage(in.readLine());
 			
 			System.out.println("Decoded Message received: " + decodedMessage);
 		}

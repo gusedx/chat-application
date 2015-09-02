@@ -108,30 +108,6 @@ class ReceiveMessage extends Thread
 		System.out.println("Starting new client receive message thread...");
 		start();
 		System.out.println("New client receive message thread started.");
-		
-//		while (true)
-//		{
-//			System.out.println("Waiting to receive message...");
-//			try {
-//				in = new DataInputStream(socket.getInputStream());
-//				String jsonString = in.readUTF();
-//				String decodedMessage = decodeJsonMessage(jsonString);
-////				this.start();
-//				System.out.println("Decoded Message received: " + decodedMessage);
-//			} catch (IOException e) {
-//				// TODO Auto-generated catch block
-//				e.printStackTrace();
-//			} //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
-//			//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
-//		}
-
-		
-/*		try {
-			in = new DataInputStream(socket.getInputStream());
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		}*/
 	}
 		
 	public void run()
@@ -144,7 +120,6 @@ class ReceiveMessage extends Thread
 				in = new DataInputStream(socket.getInputStream());
 				String jsonString = in.readUTF();
 				String decodedMessage = decodeJsonMessage(jsonString);
-//				this.start();
 				System.out.println("Decoded Message received: " + decodedMessage);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
