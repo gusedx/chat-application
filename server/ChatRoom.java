@@ -6,6 +6,7 @@ import java.util.List;
 public class ChatRoom {
 	
 	List roomGuests = new ArrayList();
+	List roomGuestIds = new ArrayList();
 	String roomName = "";
 	String owner = "";
 	
@@ -14,14 +15,21 @@ public class ChatRoom {
 		roomName = chatRoomName;
 	}
 	
-	public void addGuestToChatRoom(String guestId)
+	public void addGuestToChatRoom(Guest guest)
 	{
-		roomGuests.add(guestId);
+		roomGuests.add(guest);
+		roomGuestIds.add(guest.guestId);
+		guest.addRoomMembership(this);
 	}
 	
 	public List getRoomGuestList()
 	{
 		return roomGuests;
+	}
+	
+	public List getRoomGuestIdList()
+	{
+		return roomGuestIds;
 	}
 	
 	public void setRoomOwner(String roomOwner)

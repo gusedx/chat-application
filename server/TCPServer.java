@@ -39,17 +39,22 @@ public class TCPServer
 				guestCount++;
 				guestId = "guest" + guestCount;
 				System.out.println("Received connection from " + guestId);
+				Guest guest = new Guest(guestId, clientSocket);
 				
 				sendNewClientId(clientSocket);
 				
-				MainHall.addGuestToChatRoom(guestId); //add new guest to default chat room 
+				MainHall.addGuestToChatRoom(guest); //add new guest to default chat room 
 				//TODO: SEND ROOMCHANGE MESSAGE TO ALL CLIENTS IN THE MAINHALL
-				System.out.println("Sending MainHall room contents message to " + guestId);
+				System.out.println("Sending MainHall room contents message to " + guest.guestId);
 				sendRoomContentsMessage(clientSocket, MainHall);
-				System.out.println("Room contents message sent to " + guestId);
+				System.out.println("Room contents message sent to " + guest.guestId);
 				//TODO: SEND ROOMLIST MESSAGE TO CLIENT
 				
-				new Connection(clientSocket);
+				//USING RUNNABLE:
+				//Thread t = new Thread(new Connection(socket));
+				//t.start();
+				
+				new Connection(guest);
 				System.out.println("New connection thread started, will start listening loop again...");
 			}
 		}
@@ -63,13 +68,14 @@ public class TCPServer
 		}
 	}
 	
-	public static void sendNewClientId(Socket aClientSocket)
+	public static void sendMessage(Socket aClientSocket, String message)
 	{
 		DataOutputStream out;
 		
 		try {
 			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(encodeJsonNewIdentityMessage());
+			out.writeUTF(message);
+			out.flush();
 			
 		} catch (IOException e) {
 			System.out.println("readline: " + e.getMessage());
@@ -77,18 +83,16 @@ public class TCPServer
 		}
 	}
 	
+	public static void sendNewClientId(Socket aClientSocket)
+	{
+		String message = encodeJsonNewIdentityMessage();
+		sendMessage(aClientSocket, message);
+	}
+	
 	public static void sendRoomContentsMessage(Socket aClientSocket, ChatRoom room)
 	{
-		DataOutputStream out;
-		
-		try {
-			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(encodeJsonRoomContentsMessage(room.roomName, room.getRoomGuestList(), room.owner));
-			
-		} catch (IOException e) {
-			System.out.println("readline: " + e.getMessage());
-			e.printStackTrace();
-		}
+		String message = encodeJsonRoomContentsMessage(room.roomName, room.getRoomGuestIdList(), room.owner);
+		sendMessage(aClientSocket, message);
 	}
 	
 	public static String encodeJsonNewIdentityMessage()
@@ -167,6 +171,52 @@ public class TCPServer
 		
 		return jsonText;
 	}
+	
+	public static String encodeJsonEchoMessageToClient(String guestId, String message)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "message");
+		obj.put("identity", guestId);
+		obj.put("content", message);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			System.out.println("readline: " + e.getMessage());
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		//System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static void echoMessage(String decodedMessage, Guest senderGuest)
+	{
+		String message = encodeJsonEchoMessageToClient(senderGuest.guestId, decodedMessage);
+		System.out.println("message to echo: " + message);
+		
+		ChatRoom room;
+		Guest receivingGuest;
+		
+		//echo the received message to each guest (other than the sender) that is a member of a room that the sender is a member of:
+		Iterator<ChatRoom> roomListIterator = senderGuest.getRoomMemberships().iterator();
+		while (roomListIterator.hasNext())
+		{
+			room = roomListIterator.next();
+			System.out.println("Relaying message to members of room " + room.roomName);
+			Iterator<Guest> guestListIterator = room.getRoomGuestList().iterator();
+			while (guestListIterator.hasNext())
+			{
+				receivingGuest = guestListIterator.next();
+				if (receivingGuest.guestId != senderGuest.guestId)
+				{
+					System.out.println("Relaying message to " + receivingGuest.guestId);
+					sendMessage(receivingGuest.guestSocket, message);
+				}
+			}
+		}
+	}
 }
 
 class Connection extends Thread
@@ -174,12 +224,14 @@ class Connection extends Thread
 	DataInputStream in;
 	DataOutputStream out;
 	Socket clientSocket;
+	Guest guestClient;
 	
-	public Connection(Socket aClientSocket)
+	public Connection(Guest guest)
 	{
 		try
 		{
-			clientSocket = aClientSocket;
+			guestClient = guest;
+			clientSocket = guest.guestSocket;
 //			in = new DataInputStream(clientSocket.getInputStream());
 //			out = new DataOutputStream(clientSocket.getOutputStream());
 			
@@ -213,6 +265,9 @@ class Connection extends Thread
 			try {
 				in = new DataInputStream(clientSocket.getInputStream());
 				decodedMessage = decodeJsonMessage(in.readUTF());
+				TCPServer.echoMessage(decodedMessage, guestClient);
+				//if (msg.equals("end")) //TODO: THIS IS WHERE WE RECEIVE THE CLIENT DISCONNECT MESSAGE
+				//	break;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();

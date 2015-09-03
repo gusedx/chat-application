@@ -44,6 +44,7 @@ public class TCPClient
 				System.out.println("Sending data...");	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in));
 				out.writeUTF(encodeJsonMessage(consoleInput.readLine()));
+				out.flush();
 			}
 		}
 		catch (UnknownHostException e)
@@ -120,7 +121,7 @@ class ReceiveMessage extends Thread
 				in = new DataInputStream(socket.getInputStream());
 				String jsonString = in.readUTF();
 				String decodedMessage = decodeJsonMessage(jsonString);
-				System.out.println("Decoded Message received: " + decodedMessage);
+				System.out.println(decodedMessage);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -160,7 +161,7 @@ class ReceiveMessage extends Thread
 			{
 				case "newidentity":
 					key = "identity";
-					break;
+					return json.getOrDefault(key, null).toString();
 					
 				case "roomcontents":
 					key = "roomid";
@@ -183,22 +184,23 @@ class ReceiveMessage extends Thread
 							guests = guests + "*";
 						}
 					}
-					System.out.println(myRoom + " contains " + guests);
-					
-					break;
-					
+					return (myRoom + " contains " + guests);
+
+				case "message":
+					key = "identity";
+					value = json.getOrDefault(key, null).toString();
+					key = "content";
+					String message = value + ": " + json.getOrDefault(key, null).toString();
+					return message; 
 				default:
-					System.out.println("Invalid message type " + type);
+					return "Invalid message type " + type;
 					//TODO: ADD ERROR HANDLING
-					break;
 			}
-			value = json.getOrDefault(key, null).toString();
 		}
 		catch (ParseException pe)
 		{
 			System.out.println("Parser Exception: " + pe);
 		}
-		
-		return value;
+		return ("Invalid message type.");
 	}
 }
