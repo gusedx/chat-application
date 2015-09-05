@@ -15,6 +15,7 @@ public class TCPServer
 
 	static int guestCount = 0; //total number of guests connected to the server
 	static String guestId;
+	static List clientList = new ArrayList();
 	
 	public static void main (String args[])
 	{
@@ -41,7 +42,9 @@ public class TCPServer
 				System.out.println("Received connection from " + guestId);
 				Guest guest = new Guest(guestId, clientSocket);
 				
-				sendNewClientId(clientSocket);
+				sendNewClientId(guest, guest.guestId, "");
+				clientList.add(guest);
+				//System.out.println("client list size: " + clientList.size());
 				
 				MainHall.addGuestToChatRoom(guest); //add new guest to default chat room 
 				//TODO: SEND ROOMCHANGE MESSAGE TO ALL CLIENTS IN THE MAINHALL
@@ -83,10 +86,11 @@ public class TCPServer
 		}
 	}
 	
-	public static void sendNewClientId(Socket aClientSocket)
+	public static void sendNewClientId(Guest guest, String newId, String formerId)
 	{
-		String message = encodeJsonNewIdentityMessage();
-		sendMessage(aClientSocket, message);
+		String message = encodeJsonNewIdentityMessage(newId, formerId);
+		System.out.println("Encoded new identity message: " + message);
+		sendMessage(guest.guestSocket, message);
 	}
 	
 	public static void sendRoomContentsMessage(Socket aClientSocket, ChatRoom room)
@@ -95,12 +99,12 @@ public class TCPServer
 		sendMessage(aClientSocket, message);
 	}
 	
-	public static String encodeJsonNewIdentityMessage()
+	public static String encodeJsonNewIdentityMessage(String identity, String formerId)
 	{
 		JSONObject obj = new JSONObject();
 		obj.put("type", "newidentity");
-		obj.put("former", "");
-		obj.put("identity", guestId);
+		obj.put("former", formerId);
+		obj.put("identity", identity);
 		StringWriter out = new StringWriter();
 		try {
 			obj.writeJSONString(out);
@@ -223,17 +227,15 @@ class Connection extends Thread
 {
 	DataInputStream in;
 	DataOutputStream out;
-	Socket clientSocket;
-	Guest guestClient;
+	Guest clientGuest;
 	
 	public Connection(Guest guest)
 	{
 		try
 		{
-			guestClient = guest;
-			clientSocket = guest.guestSocket;
 //			in = new DataInputStream(clientSocket.getInputStream());
 //			out = new DataOutputStream(clientSocket.getOutputStream());
+			clientGuest = guest;
 			
 			System.out.println("Starting new server thread...");
 			this.start();
@@ -263,9 +265,9 @@ class Connection extends Thread
 			System.out.println("Waiting for encoded JSON message...");
 			
 			try {
-				in = new DataInputStream(clientSocket.getInputStream());
-				decodedMessage = decodeJsonMessage(in.readUTF());
-				TCPServer.echoMessage(decodedMessage, guestClient);
+				in = new DataInputStream(clientGuest.guestSocket.getInputStream());
+				processJsonMessage(in.readUTF());
+				
 				//if (msg.equals("end")) //TODO: THIS IS WHERE WE RECEIVE THE CLIENT DISCONNECT MESSAGE
 				//	break;
 			} catch (IOException e) {
@@ -277,7 +279,7 @@ class Connection extends Thread
 		}
 	}
 	
-	public static String decodeJsonMessage(String jsonString)
+	public void processJsonMessage(String jsonString)
 	{	
 		String value = null;
 		
@@ -302,7 +304,6 @@ class Connection extends Thread
 			Map json = (Map)parser.parse(jsonString, containerFactory);
 			Iterator iter = json.entrySet().iterator();
 
-			//TODO: THIS COULD BE A GENERIC JSON DECODER WITH THE KEY SPECIFIED BY THE CALLING FUNCTION (MESSAGE TYPE AND KEY TO GET A CERTAIN VALUE, SUCH AS MESSAGE CONTENT)
 			String key = "";
 			String type = json.getOrDefault("type", null).toString();
 			
@@ -310,6 +311,32 @@ class Connection extends Thread
 			{
 				case "message":
 					key = "content";
+					value = json.getOrDefault(key, null).toString();
+					TCPServer.echoMessage(value, clientGuest);
+					break;
+				case "identitychange":
+					key = "identity";
+					value = json.getOrDefault(key, null).toString();
+					System.out.println("New identity value requested from client: " + value);
+
+					if ((isRequestedIdValid(value)) && (!isRequestedIdInUse(value)))
+					{
+						System.out.println("Identity change from " + clientGuest.guestId + " to " + value + " allowed. clientList size: " + TCPServer.clientList.size());
+						//send the new id to all the clients:
+						Iterator<Guest> clientListIterator = TCPServer.clientList.iterator();
+						while (clientListIterator.hasNext())
+						{
+							TCPServer.sendNewClientId(clientListIterator.next(), value, clientGuest.guestId);
+						}
+						clientGuest.guestId = value;
+					}
+					else
+					{
+						System.out.println("Identity change from " + clientGuest.guestId + " to " + value + " NOT allowed.");
+						//send the current id to the requesting client only:
+						TCPServer.sendNewClientId(clientGuest, clientGuest.guestId, clientGuest.guestId);
+					}
+
 					break;
 				default:
 					System.out.println("Invalid message type " + type);
@@ -333,7 +360,36 @@ class Connection extends Thread
 		{
 			System.out.println("Parser Exception: " + pe);
 		}
+	}
+	
+	public boolean isRequestedIdValid(String id)
+	{
+		String pattern= "^[a-zA-Z0-9]*$";
+		if (!id.matches(pattern))
+		{
+			return false;
+		}
+		if (id.length() < 3 || id.length() > 16)
+		{
+			return false;
+		}
 		
-		return value;
+		return true;
+	}
+	
+	public boolean isRequestedIdInUse(String id)
+	{
+		Guest guest;
+		for (int i = 0; i < TCPServer.clientList.size(); i++)
+		{
+			guest = (Guest) TCPServer.clientList.get(i);
+			System.out.println("Checking requested id " + id + " against id " + guest.guestId);
+			if(id.equals(guest.guestId))
+			{
+				System.out.println("ID " + id + " already in use.");
+				return true;
+			}
+		}
+		return false;
 	}
 }

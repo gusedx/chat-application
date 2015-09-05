@@ -15,9 +15,15 @@ import org.json.simple.parser.ParseException;
 
 public class TCPClient
 {
+	public static String clientId = "";
+
 	public static void main(String args[])
 	{	
 		Socket socket = null;
+		String userInput;
+		String[] commandArguments;
+		String firstInputChar;
+		
 		try
 		{
 			int serverPort = 4444;
@@ -43,8 +49,31 @@ public class TCPClient
 													
 				System.out.println("Sending data...");	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in));
-				out.writeUTF(encodeJsonMessage(consoleInput.readLine()));
-				out.flush();
+				userInput = consoleInput.readLine();
+				firstInputChar = String.valueOf(userInput.charAt(0));
+							
+				if (firstInputChar.equals("#")) //if the user input is a command
+				{
+					System.out.println("Input was a command...");
+					userInput = userInput.replace(firstInputChar, "");
+					commandArguments = userInput.split(" ");
+					switch(commandArguments[0])
+					{
+						case "identitychange":
+							sendIdentityChange(socket, commandArguments[1]);
+							break;
+							
+						default:
+							System.out.println("Invalid command " + commandArguments[0]);
+							break;
+					}
+					
+				}
+				else //message from user to other guests
+				{
+					System.out.println("Input was a user message...");
+					sendUserMessage(socket, userInput);
+				}
 			}
 		}
 		catch (UnknownHostException e)
@@ -91,9 +120,50 @@ public class TCPClient
 		return jsonText;
 	}
 	
-	public static void SetPrompt(String guestId)
+	public static String encodeJsonIdentityChange(String identity)
 	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "identitychange");
+		obj.put("identity", identity);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
 		
+		return jsonText;
+	}
+	
+	public static void sendMessage(Socket aClientSocket, String message)
+	{
+		DataOutputStream out;
+		
+		try {
+			out = new DataOutputStream(aClientSocket.getOutputStream());
+			out.writeUTF(message);
+			out.flush();
+			
+		} catch (IOException e) {
+			System.out.println("readline: " + e.getMessage());
+			e.printStackTrace();
+		}
+	}
+	
+	public static void sendUserMessage(Socket aClientSocket, String userMessage)
+	{
+		String message = encodeJsonMessage(userMessage);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendIdentityChange(Socket aClientSocket, String identity)
+	{
+		String message = encodeJsonIdentityChange(identity);
+		System.out.println("new JSON encoded identity to be sent: " + message);
+		sendMessage(aClientSocket, message);
 	}
 }
 
@@ -120,8 +190,7 @@ class ReceiveMessage extends Thread
 			try {
 				in = new DataInputStream(socket.getInputStream());
 				String jsonString = in.readUTF();
-				String decodedMessage = decodeJsonMessage(jsonString);
-				System.out.println(decodedMessage);
+				processJsonMessage(jsonString);
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -130,7 +199,7 @@ class ReceiveMessage extends Thread
 		}
 	}
 	
-	public static String decodeJsonMessage(String jsonString)
+	public static void processJsonMessage(String jsonString)
 	{	
 		String value = null;
 		
@@ -160,8 +229,29 @@ class ReceiveMessage extends Thread
 			switch(type)
 			{
 				case "newidentity":
+					String formerId = "";
 					key = "identity";
-					return json.getOrDefault(key, null).toString();
+					value = json.getOrDefault(key, null).toString();
+					key = "former";
+					formerId = json.getOrDefault(key, null).toString();
+					
+					if (formerId.equals(TCPClient.clientId) || TCPClient.clientId.equals("")) //new id for this client (client does not have an id or former id in message is client's current id:
+					{
+						if (formerId.equals(value))
+						{
+							System.out.println("Requested identity invalid or in use");
+						}
+						else
+						{
+							TCPClient.clientId = value;
+							System.out.println(formerId + " is now " + TCPClient.clientId);
+						}
+					}
+					else //new id is not for this client
+					{
+						System.out.println(formerId + " is now " + value);
+					}
+					break;
 					
 				case "roomcontents":
 					key = "roomid";
@@ -184,23 +274,25 @@ class ReceiveMessage extends Thread
 							guests = guests + "*";
 						}
 					}
-					return (myRoom + " contains " + guests);
+					System.out.println(myRoom + " contains " + guests);
+					break;
 
 				case "message":
 					key = "identity";
 					value = json.getOrDefault(key, null).toString();
 					key = "content";
 					String message = value + ": " + json.getOrDefault(key, null).toString();
-					return message; 
+					System.out.println(message);
+					break;
 				default:
-					return "Invalid message type " + type;
+					System.out.println("Invalid message type " + type);
 					//TODO: ADD ERROR HANDLING
+					break;
 			}
 		}
 		catch (ParseException pe)
 		{
 			System.out.println("Parser Exception: " + pe);
 		}
-		return ("Invalid message type.");
 	}
 }
