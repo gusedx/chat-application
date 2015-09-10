@@ -16,6 +16,7 @@ import org.json.simple.parser.ParseException;
 public class TCPClient
 {
 	public static String clientId = "";
+	public static String hostname = "";
 
 	public static void main(String args[])
 	{	
@@ -23,25 +24,28 @@ public class TCPClient
 		String userInput;
 		String[] commandArguments;
 		String firstInputChar;
+		String newRoomName = "";
 		
 		try
 		{
 			int serverPort = 4444;
+			hostname = args[0];
 			if (args.length > 1)
 			{
 				serverPort = Integer.parseInt(args[1]);
 			}
 			
-			System.out.println("Attempting to connect to host " + args[0] + " on port " + serverPort);
+			System.out.println("Attempting to connect to host " + hostname + " on port " + serverPort);
 			
 			//socket = new Socket(args[0], serverPort);
 			socket = new Socket();
 //			System.out.println("Client local port: " + socket.getLocalPort());
-			socket.connect(new InetSocketAddress(args[0], serverPort), 10000);
-			System.out.println("Connection Established");
+			socket.connect(new InetSocketAddress(hostname, serverPort), 10000);
 			
 			ReceiveMessage receivedMessage = new ReceiveMessage(socket);
 //			receivedMessage.start();
+			
+			sendRequestList(socket);
 			
 			while (true)
 			{
@@ -57,17 +61,41 @@ public class TCPClient
 					System.out.println("Input was a command...");
 					userInput = userInput.replace(firstInputChar, "");
 					commandArguments = userInput.split(" ");
-					switch(commandArguments[0])
+					if (commandArguments.length > 1)
 					{
-						case "identitychange":
-							sendIdentityChange(socket, commandArguments[1]);
-							break;
-							
-						default:
-							System.out.println("Invalid command " + commandArguments[0]);
-							break;
+						switch(commandArguments[0].toLowerCase())
+						{
+							case "identitychange":
+								sendIdentityChange(socket, commandArguments[1]);
+								break;
+								
+							case "createroom":
+								newRoomName = commandArguments[1];
+								sendCreateRoom(socket, newRoomName);
+								break;
+								
+							case "list":
+								sendRequestList(socket);
+								break;
+								
+							case "join":
+								newRoomName = commandArguments[1];
+								sendJoin(socket, newRoomName);
+								break;
+								
+							case "who":
+								sendWho(socket, commandArguments[1]);
+								break;
+								
+							default:
+								System.out.println("Invalid command " + commandArguments[0]);
+								break;
+						}
 					}
-					
+					else
+					{
+						System.out.println("Invalid command " + commandArguments[0]);
+					}
 				}
 				else //message from user to other guests
 				{
@@ -138,6 +166,77 @@ public class TCPClient
 		return jsonText;
 	}
 	
+	public static String encodeJsonCreateRoom(String roomName)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "createroom");
+		obj.put("roomid", roomName);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static String encodeJsonJoin(String roomName)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "join");
+		obj.put("roomid", roomName);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static String encodeJsonWho(String roomName)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "who");
+		obj.put("roomid", roomName);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static String encodeJsonRequestList()
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "list");
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
 	public static void sendMessage(Socket aClientSocket, String message)
 	{
 		DataOutputStream out;
@@ -163,6 +262,30 @@ public class TCPClient
 	{
 		String message = encodeJsonIdentityChange(identity);
 		System.out.println("new JSON encoded identity to be sent: " + message);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendCreateRoom(Socket aClientSocket, String roomName)
+	{
+		String message = encodeJsonCreateRoom(roomName);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendRequestList(Socket aClientSocket)
+	{
+		String message = encodeJsonRequestList();
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendJoin(Socket aClientSocket, String roomName)
+	{
+		String message = encodeJsonJoin(roomName);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendWho(Socket aClientSocket, String roomName)
+	{
+		String message = encodeJsonWho(roomName);
 		sendMessage(aClientSocket, message);
 	}
 }
@@ -204,24 +327,26 @@ class ReceiveMessage extends Thread
 		String value = null;
 		
 		JSONParser parser = new JSONParser();
-		ContainerFactory containerFactory = new ContainerFactory()
-		{
-			public List creatArrayContainer()
-			{
-				return new LinkedList();
-			}
-
-			public Map createObjectContainer()
-			{
-				return new LinkedHashMap();
-			}
-
-		};
+//		ContainerFactory containerFactory = new ContainerFactory()
+//		{
+//			public List creatArrayContainer()
+//			{
+//				return new LinkedList();
+//			}
+//
+//			public Map createObjectContainer()
+//			{
+//				return new LinkedHashMap();
+//			}
+//
+//		};
 
 		try
 		{
-			Map json = (Map)parser.parse(jsonString, containerFactory);
-			Iterator iter = json.entrySet().iterator();
+//			Map json = (Map)parser.parse(jsonString, containerFactory);
+//			Iterator iter = json.entrySet().iterator();
+			
+			JSONObject json = (JSONObject) parser.parse(jsonString);
 
 			String key = "";
 			String type = json.getOrDefault("type", null).toString();
@@ -244,7 +369,15 @@ class ReceiveMessage extends Thread
 						else
 						{
 							TCPClient.clientId = value;
-							System.out.println(formerId + " is now " + TCPClient.clientId);
+							
+							if (formerId.equals(""))
+							{
+								System.out.println("Connected to " + TCPClient.hostname + " as " + TCPClient.clientId);
+							}
+							else
+							{
+								System.out.println(formerId + " is now " + TCPClient.clientId);
+							}
 						}
 					}
 					else //new id is not for this client
@@ -269,12 +402,29 @@ class ReceiveMessage extends Thread
 					{
 						guest = guestList.get(i).toString();
 						guests = guests + " " + guest;
-						if (guest == owner)
+						System.out.println("guest = " + guest + " owner = " + owner);
+						if (guest.equals(owner))
 						{
 							guests = guests + "*";
 						}
 					}
 					System.out.println(myRoom + " contains " + guests);
+					break;
+					
+				case "roomlist":
+					String roomId;
+					int count;
+					
+//					key = "rooms";
+//					value = json.getOrDefault(key, null).toString();
+//					System.out.println("rooms info list rx: " + value); //TODO: MESSAGE RECEIVED OK, NOW NEED TO PRINT CONTENTS OF VALUE (NOT WORKING BELOW):
+					
+					JSONArray roomsInfoJsonArray = (JSONArray) json.get("rooms");
+					for (int i = 0; i < roomsInfoJsonArray.size(); i++)
+					{
+						JSONObject roomsInfoJsonArrayElement = (JSONObject) roomsInfoJsonArray.get(i);
+						System.out.println(roomsInfoJsonArrayElement.getOrDefault("roomid", null) + ": " + roomsInfoJsonArrayElement.getOrDefault("count", null) + " guests");
+					}
 					break;
 
 				case "message":
@@ -283,6 +433,28 @@ class ReceiveMessage extends Thread
 					key = "content";
 					String message = value + ": " + json.getOrDefault(key, null).toString();
 					System.out.println(message);
+					break;
+					
+				case "roomchange":
+					String formerRoom = "";
+					String newRoom = "";
+					String identity = "";
+					key = "former";
+					formerRoom = json.getOrDefault(key, null).toString();
+					key = "roomid";
+					newRoom = json.getOrDefault(key, null).toString();
+					key = "identity";
+					identity = json.getOrDefault(key, null).toString();
+					
+					if ((!identity.equals(TCPClient.clientId)) || (!newRoom.equals(formerRoom))) //request was for another client or was successful
+					{
+						System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+					}
+					else //request was not successful
+					{
+						System.out.println("The requested room is invalid or non existent.");
+					}
+					
 					break;
 				default:
 					System.out.println("Invalid message type " + type);

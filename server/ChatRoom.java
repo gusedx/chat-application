@@ -19,12 +19,24 @@ public class ChatRoom {
 	{
 		roomGuests.add(guest);
 		roomGuestIds.add(guest.guestId);
-		guest.addRoomMembership(this);
+		guest.setRoomMembership(this);
+	}
+	
+	public void removeGuestFromChatRoom(Guest guest)
+	{
+		roomGuests.remove(guest);
+		roomGuestIds.remove(guest.guestId);
+		guest.setRoomMembership(null);
 	}
 	
 	public List getRoomGuestList()
 	{
 		return roomGuests;
+	}
+	
+	public int getNumberOfGuests()
+	{
+		return roomGuests.size();
 	}
 	
 	public List getRoomGuestIdList()

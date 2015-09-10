@@ -7,22 +7,21 @@ import java.util.List;
 public class Guest {
 	String guestId;
 	Socket guestSocket;
-	List<ChatRoom> roomMemberships;
+	ChatRoom memberRoom;
 	
 	Guest(String guestID, Socket clientSocket)
 	{
 		guestId = guestID;
 		guestSocket = clientSocket;
-		roomMemberships = new ArrayList<ChatRoom>();
 	}
 	
-	public void addRoomMembership(ChatRoom room)
+	public void setRoomMembership(ChatRoom room)
 	{
-		roomMemberships.add(room);
+		memberRoom = room;
 	}
 	
-	public List getRoomMemberships()
+	public ChatRoom getRoomMembership()
 	{
-		return roomMemberships;
+		return memberRoom;
 	}
 }

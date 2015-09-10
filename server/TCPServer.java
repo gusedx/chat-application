@@ -16,10 +16,11 @@ public class TCPServer
 	static int guestCount = 0; //total number of guests connected to the server
 	static String guestId;
 	static List clientList = new ArrayList();
+	static List roomList = new ArrayList();
 	
 	public static void main (String args[])
 	{
-		ChatRoom MainHall = new ChatRoom("MainHall"); //TODO: MAYBE CHANGE THIS TO CREATE MainHall CHATROOM VIA MESSAGE CALL
+		ChatRoom room = createNewRoom("MainHall");
 		
 		try{
 			int serverPort = 4444; //default server port
@@ -46,12 +47,11 @@ public class TCPServer
 				clientList.add(guest);
 				//System.out.println("client list size: " + clientList.size());
 				
-				MainHall.addGuestToChatRoom(guest); //add new guest to default chat room 
+				room.addGuestToChatRoom(guest); //add new guest to default chat room 
 				//TODO: SEND ROOMCHANGE MESSAGE TO ALL CLIENTS IN THE MAINHALL
 				System.out.println("Sending MainHall room contents message to " + guest.guestId);
-				sendRoomContentsMessage(clientSocket, MainHall);
+				sendRoomContentsMessage(clientSocket, room);
 				System.out.println("Room contents message sent to " + guest.guestId);
-				//TODO: SEND ROOMLIST MESSAGE TO CLIENT
 				
 				//USING RUNNABLE:
 				//Thread t = new Thread(new Connection(socket));
@@ -69,6 +69,13 @@ public class TCPServer
 		{
 			System.out.println("Exception: " + e.getMessage());
 		}
+	}
+	
+	public static ChatRoom createNewRoom(String roomName)
+	{
+		ChatRoom room = new ChatRoom(roomName);
+		roomList.add(room);
+		return room;
 	}
 	
 	public static void sendMessage(Socket aClientSocket, String message)
@@ -96,6 +103,18 @@ public class TCPServer
 	public static void sendRoomContentsMessage(Socket aClientSocket, ChatRoom room)
 	{
 		String message = encodeJsonRoomContentsMessage(room.roomName, room.getRoomGuestIdList(), room.owner);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendRoomList(Socket aClientSocket)
+	{	
+		String message = encodeJsonRoomListMessage();
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendRoomChange(Socket aClientSocket, String identity, String formerRoom, String newRoom)
+	{	
+		String message = encodeJsonRoomChangeMessage(identity, formerRoom, newRoom);
 		sendMessage(aClientSocket, message);
 	}
 	
@@ -158,11 +177,43 @@ public class TCPServer
 		return jsonText;
 	}
 	
-	public static String encodeJsonRoomListMessage(List rooms)
+	public static String encodeJsonRoomInformation(String roomId, int numberOfGuests)
 	{
 		JSONObject obj = new JSONObject();
+		obj.put("roomid", roomId);
+		obj.put("count", new Integer(numberOfGuests));
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			System.out.println("readline: " + e.getMessage());
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		//System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static String encodeJsonRoomListMessage()
+	{
+		JSONArray roomInformationList = new JSONArray();
+		JSONObject obj = new JSONObject();
+		ChatRoom room;
+		
+		for (int i = 0; i < roomList.size(); i++)
+		{
+			room = (ChatRoom) roomList.get(i);
+			
+			JSONObject jsonEncodedRoomInformation = new JSONObject();
+			jsonEncodedRoomInformation.put("roomid",room.roomName);
+			jsonEncodedRoomInformation.put("count", new Integer(room.getNumberOfGuests()));
+			//String jsonEncodedRoomInformation = encodeJsonRoomInformation(room.roomName, room.getNumberOfGuests());
+			roomInformationList.add(jsonEncodedRoomInformation);
+		}
+		
 		obj.put("type", "roomlist");
-		obj.put("rooms", rooms);
+		obj.put("rooms", roomInformationList);
 		StringWriter out = new StringWriter();
 		try {
 			obj.writeJSONString(out);
@@ -200,16 +251,16 @@ public class TCPServer
 		String message = encodeJsonEchoMessageToClient(senderGuest.guestId, decodedMessage);
 		System.out.println("message to echo: " + message);
 		
-		ChatRoom room;
+//		ChatRoom room;
 		Guest receivingGuest;
 		
-		//echo the received message to each guest (other than the sender) that is a member of a room that the sender is a member of:
-		Iterator<ChatRoom> roomListIterator = senderGuest.getRoomMemberships().iterator();
-		while (roomListIterator.hasNext())
-		{
-			room = roomListIterator.next();
-			System.out.println("Relaying message to members of room " + room.roomName);
-			Iterator<Guest> guestListIterator = room.getRoomGuestList().iterator();
+//		//echo the received message to each guest (other than the sender) that is a member of a room that the sender is a member of:
+//		Iterator<ChatRoom> roomListIterator = senderGuest.getRoomMemberships().iterator();
+//		while (roomListIterator.hasNext())
+//		{
+//			room = roomListIterator.next();
+			System.out.println("Relaying message to members of room " + senderGuest.memberRoom.roomName);
+			Iterator<Guest> guestListIterator = senderGuest.memberRoom.getRoomGuestList().iterator();
 			while (guestListIterator.hasNext())
 			{
 				receivingGuest = guestListIterator.next();
@@ -219,7 +270,7 @@ public class TCPServer
 					sendMessage(receivingGuest.guestSocket, message);
 				}
 			}
-		}
+//		}
 	}
 }
 
@@ -319,9 +370,20 @@ class Connection extends Thread
 					value = json.getOrDefault(key, null).toString();
 					System.out.println("New identity value requested from client: " + value);
 
-					if ((isRequestedIdValid(value)) && (!isRequestedIdInUse(value)))
+					if ((isRequestedIdValid(value, 3, 16)) && (!isRequestedIdInUse(value)))
 					{
-						System.out.println("Identity change from " + clientGuest.guestId + " to " + value + " allowed. clientList size: " + TCPServer.clientList.size());
+						System.out.println("Identity change from " + clientGuest.guestId + " to " + value + " allowed.");
+
+						//update ownership of room(s) owned by the client with the changed id:
+						Iterator<ChatRoom> roomListIterator = TCPServer.roomList.iterator();
+						while (roomListIterator.hasNext())
+						{
+							ChatRoom room = roomListIterator.next();
+							if (room.owner.equals(clientGuest.guestId))
+							{
+								room.owner = value;
+							}
+						}
 						//send the new id to all the clients:
 						Iterator<Guest> clientListIterator = TCPServer.clientList.iterator();
 						while (clientListIterator.hasNext())
@@ -338,12 +400,76 @@ class Connection extends Thread
 					}
 
 					break;
+				case "createroom":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					
+					if ((isRequestedIdValid(value, 3, 32)) && (!isRoomNameInUse(value)))
+					{
+						System.out.println("Creating room " + value);
+						ChatRoom room = TCPServer.createNewRoom(value);
+						room.setRoomOwner(clientGuest.guestId);
+					}
+					else
+					{
+						System.out.println("Room name " + value + " is invalid or is already in use.");
+					}
+					
+					TCPServer.sendRoomList(clientGuest.guestSocket);
+					
+					break;
+				case "list":
+					TCPServer.sendRoomList(clientGuest.guestSocket);
+					break;
+				case "join":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					Guest receivingGuest;
+					String formerRoomName = clientGuest.getRoomMembership().roomName; 
+					ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
+					
+					if (isRoomNameInUse(value))
+					{
+						roomArray[0] = clientGuest.memberRoom; //former room
+						roomArray[1] = getRoomByName(value); //new room
+						
+						roomArray[0].removeGuestFromChatRoom(clientGuest);
+						roomArray[1].addGuestToChatRoom(clientGuest);
+						
+						//send RoomChange message to all clients currently in the requesting client's current room and requesting client's requested room:
+						for (int i = 0; i < roomArray.length; i++)
+						{
+							Iterator<Guest> guestListIterator = roomArray[i].getRoomGuestList().iterator();
+							while (guestListIterator.hasNext())
+							{
+								receivingGuest = guestListIterator.next();
+								TCPServer.sendRoomChange(receivingGuest.guestSocket, clientGuest.guestId, formerRoomName, value);
+							}
+						}
+						
+						if (value.equals("MainHall"))
+						{
+							TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, roomArray[1]);
+							TCPServer.sendRoomList(clientGuest.guestSocket);
+						}
+					}
+					else
+					{
+						//send RoomChange message only to the requesting client:
+						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
+					}
+					break;
+				case "who":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, getRoomByName(value));
+					break;
 				default:
 					System.out.println("Invalid message type " + type);
 					//TODO: ADD ERROR HANDLING
 					break;
 			}
-			value = json.getOrDefault(key, null).toString();
+			//value = json.getOrDefault(key, null).toString();
 
 			//DEBUG ONLY:
 			/*		    System.out.println("==iterate result==");
@@ -362,14 +488,14 @@ class Connection extends Thread
 		}
 	}
 	
-	public boolean isRequestedIdValid(String id)
+	public boolean isRequestedIdValid(String id, int minLength, int maxLength)
 	{
 		String pattern= "^[a-zA-Z0-9]*$";
 		if (!id.matches(pattern))
 		{
 			return false;
 		}
-		if (id.length() < 3 || id.length() > 16)
+		if (id.length() < minLength || id.length() > maxLength)
 		{
 			return false;
 		}
@@ -391,5 +517,35 @@ class Connection extends Thread
 			}
 		}
 		return false;
+	}
+	public boolean isRoomNameInUse(String name)
+	{
+		ChatRoom room;
+		for (int i = 0; i < TCPServer.roomList.size(); i++)
+		{
+			room = (ChatRoom) TCPServer.roomList.get(i);
+			System.out.println("Checking requested room name " + name + " against room " + room.roomName);
+			if(name.equals(room.roomName))
+			{
+				System.out.println("Room name " + name + " is in use.");
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public ChatRoom getRoomByName(String roomName)
+	{
+		ChatRoom room;
+		for (int i = 0; i < TCPServer.roomList.size(); i++)
+		{
+			room = (ChatRoom) TCPServer.roomList.get(i);
+			if (room.roomName.equals(roomName))
+			{
+				return room;
+			}
+		}
+		
+		return null;
 	}
 }
