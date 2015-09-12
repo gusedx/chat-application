@@ -17,10 +17,10 @@ public class TCPClient
 {
 	public static String clientId = "";
 	public static String hostname = "";
+	public static Socket socket = null;
 
 	public static void main(String args[])
 	{	
-		Socket socket = null;
 		String userInput;
 		String[] commandArguments;
 		String firstInputChar;
@@ -61,41 +61,42 @@ public class TCPClient
 					System.out.println("Input was a command...");
 					userInput = userInput.replace(firstInputChar, "");
 					commandArguments = userInput.split(" ");
-					if (commandArguments.length > 1)
+					switch(commandArguments[0].toLowerCase())
 					{
-						switch(commandArguments[0].toLowerCase())
-						{
-							case "identitychange":
-								sendIdentityChange(socket, commandArguments[1]);
-								break;
-								
-							case "createroom":
-								newRoomName = commandArguments[1];
-								sendCreateRoom(socket, newRoomName);
-								break;
-								
-							case "list":
-								sendRequestList(socket);
-								break;
-								
-							case "join":
-								newRoomName = commandArguments[1];
-								sendJoin(socket, newRoomName);
-								break;
-								
-							case "who":
-								sendWho(socket, commandArguments[1]);
-								break;
-								
-							default:
-								System.out.println("Invalid command " + commandArguments[0]);
-								break;
+						case "identitychange":
+							sendIdentityChange(socket, commandArguments[1]);
+							break;
+							
+						case "createroom":
+							newRoomName = commandArguments[1];
+							sendCreateRoom(socket, newRoomName);
+							break;
+							
+						case "list":
+							sendRequestList(socket);
+							break;
+							
+						case "join":
+							newRoomName = commandArguments[1];
+							sendJoin(socket, newRoomName);
+							break;
+							
+						case "who":
+							sendWho(socket, commandArguments[1]);
+							break;
+							
+						case "delete":
+							sendDeleteRoom(socket, commandArguments[1]);
+							break;
+							
+						case "quit":
+							sendQuit(socket);
+							break;
+							
+						default:
+							System.out.println("Invalid command " + commandArguments[0]);
+							break;
 						}
-					}
-					else
-					{
-						System.out.println("Invalid command " + commandArguments[0]);
-					}
 				}
 				else //message from user to other guests
 				{
@@ -127,6 +128,17 @@ public class TCPClient
 				{
 					System.out.println("Close: " + e.getMessage());
 				}
+		}
+	}
+	
+	public static void closeConnection()
+	{
+		try {
+			System.out.println("Closing connection.");
+			socket.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
 	}
 	
@@ -236,6 +248,41 @@ public class TCPClient
 		
 		return jsonText;
 	}
+
+	public static String encodeJsonDeleteRoom(String roomName)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "delete");
+		obj.put("roomid", roomName);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
+	public static String encodeJsonQuit()
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "quit");
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
 	
 	public static void sendMessage(Socket aClientSocket, String message)
 	{
@@ -286,6 +333,18 @@ public class TCPClient
 	public static void sendWho(Socket aClientSocket, String roomName)
 	{
 		String message = encodeJsonWho(roomName);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendDeleteRoom(Socket aClientSocket, String roomName)
+	{
+		String message = encodeJsonDeleteRoom(roomName);
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendQuit(Socket aClientSocket)
+	{
+		String message = encodeJsonQuit();
 		sendMessage(aClientSocket, message);
 	}
 }
@@ -448,7 +507,16 @@ class ReceiveMessage extends Thread
 					
 					if ((!identity.equals(TCPClient.clientId)) || (!newRoom.equals(formerRoom))) //request was for another client or was successful
 					{
-						System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+						if (newRoom.equals(""))
+						{
+							System.out.println("Closing the connection to the server and exiting.");
+							TCPClient.closeConnection();
+							System.exit(0);
+						}
+						else
+						{
+							System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+						}
 					}
 					else //request was not successful
 					{

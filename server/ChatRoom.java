@@ -17,6 +17,7 @@ public class ChatRoom {
 	
 	public void addGuestToChatRoom(Guest guest)
 	{
+		System.out.println("Adding " + guest.guestId + " to " + this.roomName);
 		roomGuests.add(guest);
 		roomGuestIds.add(guest.guestId);
 		guest.setRoomMembership(this);
@@ -24,6 +25,11 @@ public class ChatRoom {
 	
 	public void removeGuestFromChatRoom(Guest guest)
 	{
+		System.out.println("Removing " + guest.guestId + " from " + this.roomName);
+		if (guest.guestId.equals(owner))
+		{
+			setRoomOwner("");
+		}
 		roomGuests.remove(guest);
 		roomGuestIds.remove(guest.guestId);
 		guest.setRoomMembership(null);

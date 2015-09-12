@@ -462,7 +462,76 @@ class Connection extends Thread
 				case "who":
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
-					TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, getRoomByName(value));
+					if (isRoomNameInUse(value))
+					{
+						TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, getRoomByName(value));
+					}
+					else
+					{
+						System.out.println("Room name " + value + " does not exist.");
+					}
+					break;
+					
+				case "delete":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					ChatRoom room = null;
+					Guest guest;
+					List<Guest> roomGuestList;
+					
+					if (isRoomNameInUse(value))
+					{
+						room = getRoomByName(value);
+						if (room.owner.equals(clientGuest.guestId))
+						{
+							//move all users of the room to the MainHall:
+							roomGuestList = room.getRoomGuestList();
+							Iterator<Guest> guestListIterator = roomGuestList.iterator();
+							while (guestListIterator.hasNext())
+							{
+								guest = guestListIterator.next();
+								room = getRoomByName(value);
+								System.out.println("Moving guest " + guest.guestId);
+								guestListIterator.remove();
+								room.removeGuestFromChatRoom(guest);
+								room = getRoomByName("MainHall");
+								room.addGuestToChatRoom(guest);
+							}
+							//delete the room:
+							room = getRoomByName(value);
+							TCPServer.roomList.remove(room);
+							room = null;
+							System.gc();
+						}
+						else
+						{
+							System.out.println("cannot delete room " + room + " as " + clientGuest.guestId + " is not its owner. Owner is " + room.owner);
+						}
+					}
+					TCPServer.sendRoomList(clientGuest.guestSocket);
+					break;
+					
+				case "quit":
+					room = clientGuest.getRoomMembership();
+					roomGuestList = room.getRoomGuestList();
+					Iterator<Guest> guestListIterator = roomGuestList.iterator();
+					while (guestListIterator.hasNext())
+					{
+						guest = guestListIterator.next();
+						TCPServer.sendRoomChange(guest.guestSocket, guest.guestId, room.roomName, "");
+						if (guest.guestId.equals(clientGuest.guestId))
+						{
+							guestListIterator.remove();
+							room.removeGuestFromChatRoom(clientGuest);
+							try {
+								System.out.println("Closing connection to " + clientGuest.guestId);
+								clientGuest.guestSocket.close();
+							} catch (IOException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+						}
+					}
 					break;
 				default:
 					System.out.println("Invalid message type " + type);
