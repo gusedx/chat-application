@@ -18,13 +18,14 @@ public class TCPClient
 	public static String clientId = "";
 	public static String hostname = "";
 	public static Socket socket = null;
+	public static String newRoomName = "";
 
 	public static void main(String args[])
 	{	
 		String userInput;
 		String[] commandArguments;
 		String firstInputChar;
-		String newRoomName = "";
+		String roomName = "";
 		
 		try
 		{
@@ -52,7 +53,7 @@ public class TCPClient
 				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 													
 				System.out.println("Sending data...");	
-				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in));
+				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in, "UTF-8"));
 				userInput = consoleInput.readLine();
 				firstInputChar = String.valueOf(userInput.charAt(0));
 							
@@ -77,8 +78,8 @@ public class TCPClient
 							break;
 							
 						case "join":
-							newRoomName = commandArguments[1];
-							sendJoin(socket, newRoomName);
+							roomName = commandArguments[1];
+							sendJoin(socket, roomName);
 							break;
 							
 						case "who":
@@ -91,6 +92,10 @@ public class TCPClient
 							
 						case "quit":
 							sendQuit(socket);
+							break;
+							
+						case "kick":
+							sendKick(socket, commandArguments[1], commandArguments[2], Integer.parseInt(commandArguments[3]));
 							break;
 							
 						default:
@@ -284,13 +289,33 @@ public class TCPClient
 		return jsonText;
 	}
 	
+	public static String encodeJsonKick(String roomid, int timeout, String username)
+	{
+		JSONObject obj = new JSONObject();
+		obj.put("type", "kick");
+		obj.put("roomid", roomid);
+		obj.put("time", new Integer(timeout));
+		obj.put("identity", username);
+		StringWriter out = new StringWriter();
+		try {
+			obj.writeJSONString(out);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		String jsonText = out.toString();
+		System.out.println(jsonText);
+		
+		return jsonText;
+	}
+	
 	public static void sendMessage(Socket aClientSocket, String message)
 	{
 		DataOutputStream out;
 		
 		try {
 			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(message);
+			out.writeUTF(message + "\n");
 			out.flush();
 			
 		} catch (IOException e) {
@@ -345,6 +370,12 @@ public class TCPClient
 	public static void sendQuit(Socket aClientSocket)
 	{
 		String message = encodeJsonQuit();
+		sendMessage(aClientSocket, message);
+	}
+	
+	public static void sendKick(Socket aClientSocket, String username, String roomid, int timeout)
+	{
+		String message = encodeJsonKick(roomid, timeout, username);
 		sendMessage(aClientSocket, message);
 	}
 }
@@ -472,17 +503,29 @@ class ReceiveMessage extends Thread
 					
 				case "roomlist":
 					String roomId;
-					int count;
-					
-//					key = "rooms";
-//					value = json.getOrDefault(key, null).toString();
-//					System.out.println("rooms info list rx: " + value); //TODO: MESSAGE RECEIVED OK, NOW NEED TO PRINT CONTENTS OF VALUE (NOT WORKING BELOW):
-					
+					Boolean roomCreated = false;
+									
 					JSONArray roomsInfoJsonArray = (JSONArray) json.get("rooms");
 					for (int i = 0; i < roomsInfoJsonArray.size(); i++)
 					{
 						JSONObject roomsInfoJsonArrayElement = (JSONObject) roomsInfoJsonArray.get(i);
-						System.out.println(roomsInfoJsonArrayElement.getOrDefault("roomid", null) + ": " + roomsInfoJsonArrayElement.getOrDefault("count", null) + " guests");
+						roomId = roomsInfoJsonArrayElement.getOrDefault("roomid", null).toString();
+						if (roomId.equals(TCPClient.newRoomName))
+						{
+							roomCreated = true;
+						}
+						System.out.println(roomId + ": " + roomsInfoJsonArrayElement.getOrDefault("count", null) + " guests");
+					}
+					
+					if (roomCreated)
+					{
+						System.out.println("Room " + TCPClient.newRoomName + " created.");
+						TCPClient.newRoomName = "";
+					}
+					
+					if ((!TCPClient.newRoomName.equals("")) && (!roomCreated))
+					{
+						System.out.println("Room " + TCPClient.newRoomName + " is invalid or already in use.");
 					}
 					break;
 
@@ -507,7 +550,8 @@ class ReceiveMessage extends Thread
 					
 					if ((!identity.equals(TCPClient.clientId)) || (!newRoom.equals(formerRoom))) //request was for another client or was successful
 					{
-						if (newRoom.equals(""))
+						System.out.println(identity + " leaves " + formerRoom);
+						if ((identity.equals(TCPClient.clientId)) && (newRoom.equals("")))
 						{
 							System.out.println("Closing the connection to the server and exiting.");
 							TCPClient.closeConnection();
@@ -515,7 +559,10 @@ class ReceiveMessage extends Thread
 						}
 						else
 						{
-							System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+							if (!newRoom.equals(""))
+							{
+								System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+							}
 						}
 					}
 					else //request was not successful

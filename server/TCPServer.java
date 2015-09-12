@@ -84,7 +84,7 @@ public class TCPServer
 		
 		try {
 			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(message);
+			out.writeUTF(message + "\n");
 			out.flush();
 			
 		} catch (IOException e) {
@@ -279,6 +279,7 @@ class Connection extends Thread
 	DataInputStream in;
 	DataOutputStream out;
 	Guest clientGuest;
+	ChatRoom room;
 	
 	public Connection(Guest guest)
 	{
@@ -317,7 +318,18 @@ class Connection extends Thread
 			
 			try {
 				in = new DataInputStream(clientGuest.guestSocket.getInputStream());
-				processJsonMessage(in.readUTF());
+				try
+				{
+					processJsonMessage(in.readUTF());
+					Thread.sleep(3000);
+				}
+				catch (InterruptedException e)
+				{
+//					Thread.currentThread().interrupt();
+					return;
+				}
+				
+				System.out.println("Thread Stopped.");
 				
 				//if (msg.equals("end")) //TODO: THIS IS WHERE WE RECEIVE THE CLIENT DISCONNECT MESSAGE
 				//	break;
@@ -378,7 +390,7 @@ class Connection extends Thread
 						Iterator<ChatRoom> roomListIterator = TCPServer.roomList.iterator();
 						while (roomListIterator.hasNext())
 						{
-							ChatRoom room = roomListIterator.next();
+							room = roomListIterator.next();
 							if (room.owner.equals(clientGuest.guestId))
 							{
 								room.owner = value;
@@ -407,7 +419,7 @@ class Connection extends Thread
 					if ((isRequestedIdValid(value, 3, 32)) && (!isRoomNameInUse(value)))
 					{
 						System.out.println("Creating room " + value);
-						ChatRoom room = TCPServer.createNewRoom(value);
+						room = TCPServer.createNewRoom(value);
 						room.setRoomOwner(clientGuest.guestId);
 					}
 					else
@@ -424,40 +436,44 @@ class Connection extends Thread
 				case "join":
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
-					Guest receivingGuest;
-					String formerRoomName = clientGuest.getRoomMembership().roomName; 
-					ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
 					
-					if (isRoomNameInUse(value))
-					{
-						roomArray[0] = clientGuest.memberRoom; //former room
-						roomArray[1] = getRoomByName(value); //new room
-						
-						roomArray[0].removeGuestFromChatRoom(clientGuest);
-						roomArray[1].addGuestToChatRoom(clientGuest);
-						
-						//send RoomChange message to all clients currently in the requesting client's current room and requesting client's requested room:
-						for (int i = 0; i < roomArray.length; i++)
-						{
-							Iterator<Guest> guestListIterator = roomArray[i].getRoomGuestList().iterator();
-							while (guestListIterator.hasNext())
-							{
-								receivingGuest = guestListIterator.next();
-								TCPServer.sendRoomChange(receivingGuest.guestSocket, clientGuest.guestId, formerRoomName, value);
-							}
-						}
-						
-						if (value.equals("MainHall"))
-						{
-							TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, roomArray[1]);
-							TCPServer.sendRoomList(clientGuest.guestSocket);
-						}
-					}
-					else
-					{
-						//send RoomChange message only to the requesting client:
-						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
-					}
+					String formerRoomName = clientGuest.getRoomMembership().roomName; 
+					
+					moveRooms(clientGuest, formerRoomName, value);
+//					Guest receivingGuest;
+//					String formerRoomName = clientGuest.getRoomMembership().roomName; 
+//					ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
+//					
+//					if (isRoomNameInUse(value))
+//					{
+//						roomArray[0] = clientGuest.memberRoom; //former room
+//						roomArray[1] = getRoomByName(value); //new room
+//						
+//						roomArray[0].removeGuestFromChatRoom(clientGuest);
+//						roomArray[1].addGuestToChatRoom(clientGuest);
+//						
+//						//send RoomChange message to all clients currently in the requesting client's current room and requesting client's requested room:
+//						for (int i = 0; i < roomArray.length; i++)
+//						{
+//							Iterator<Guest> guestListIterator = roomArray[i].getRoomGuestList().iterator();
+//							while (guestListIterator.hasNext())
+//							{
+//								receivingGuest = guestListIterator.next();
+//								TCPServer.sendRoomChange(receivingGuest.guestSocket, clientGuest.guestId, formerRoomName, value);
+//							}
+//						}
+//						
+//						if (value.equals("MainHall"))
+//						{
+//							TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, roomArray[1]);
+//							TCPServer.sendRoomList(clientGuest.guestSocket);
+//						}
+//					}
+//					else
+//					{
+//						//send RoomChange message only to the requesting client:
+//						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
+//					}
 					break;
 				case "who":
 					key = "roomid";
@@ -469,13 +485,14 @@ class Connection extends Thread
 					else
 					{
 						System.out.println("Room name " + value + " does not exist.");
+						//TODO: SEND ROOMCONTENTSMESSAGE WITH EMPTY LIST AND EMPTY OWNER (HOW TO PASS ROOM NAME TO SEND FUNCTION?)
+						//TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, null);
 					}
 					break;
 					
 				case "delete":
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
-					ChatRoom room = null;
 					Guest guest;
 					List<Guest> roomGuestList;
 					
@@ -512,25 +529,43 @@ class Connection extends Thread
 					break;
 					
 				case "quit":
+					String id = clientGuest.guestId;
 					room = clientGuest.getRoomMembership();
 					roomGuestList = room.getRoomGuestList();
 					Iterator<Guest> guestListIterator = roomGuestList.iterator();
 					while (guestListIterator.hasNext())
 					{
 						guest = guestListIterator.next();
-						TCPServer.sendRoomChange(guest.guestSocket, guest.guestId, room.roomName, "");
-						if (guest.guestId.equals(clientGuest.guestId))
-						{
-							guestListIterator.remove();
-							room.removeGuestFromChatRoom(clientGuest);
-							try {
-								System.out.println("Closing connection to " + clientGuest.guestId);
-								clientGuest.guestSocket.close();
-							} catch (IOException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
+						TCPServer.sendRoomChange(guest.guestSocket, id, room.roomName, "");
+					}
+					
+//					if (guest.guestId.equals(id))
+//					{
+//						guestListIterator.remove();
+						room.removeGuestFromChatRoom(clientGuest);
+						
+						try {
+							System.out.println("Closing connection to " + clientGuest.guestId);
+							clientGuest.guestSocket.close();
+							
+							Thread.currentThread().interrupt();
+							
+						} catch (IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
 						}
+//					}
+					break;
+					
+				case "kick":
+					key = "roomid";
+					value = json.getOrDefault(key, null).toString();
+					key = "identity";
+					String identity = json.getOrDefault(key, null).toString();
+					
+					if (clientGuest.guestId.equals(getRoomByName(value).owner)) //if the client is the owner of the room:
+					{
+						moveRooms(getGuestByName(identity), value, "MainHall");
 					}
 					break;
 				default:
@@ -554,6 +589,44 @@ class Connection extends Thread
 		catch (ParseException pe)
 		{
 			System.out.println("Parser Exception: " + pe);
+		}
+	}
+	
+	public void moveRooms(Guest targetGuest, String formerRoom, String newRoom)
+	{
+		Guest receivingGuest;
+//		String formerRoomName = clientGuest.getRoomMembership().roomName; 
+		ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
+		
+		if (isRoomNameInUse(newRoom))
+		{
+			roomArray[0] = targetGuest.memberRoom; //former room
+			roomArray[1] = getRoomByName(newRoom); //new room
+			
+			roomArray[0].removeGuestFromChatRoom(targetGuest);
+			roomArray[1].addGuestToChatRoom(targetGuest);
+			
+			//send RoomChange message to all clients currently in the requesting client's current room and requesting client's requested room:
+			for (int i = 0; i < roomArray.length; i++)
+			{
+				Iterator<Guest> guestListIterator = roomArray[i].getRoomGuestList().iterator();
+				while (guestListIterator.hasNext())
+				{
+					receivingGuest = guestListIterator.next();
+					TCPServer.sendRoomChange(receivingGuest.guestSocket, targetGuest.guestId, formerRoom, newRoom);
+				}
+			}
+			
+			if (newRoom.equals("MainHall"))
+			{
+				TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, roomArray[1]);
+				TCPServer.sendRoomList(clientGuest.guestSocket);
+			}
+		}
+		else
+		{
+			//send RoomChange message only to the requesting client:
+			TCPServer.sendRoomChange(clientGuest.guestSocket, targetGuest.guestId, formerRoom, formerRoom);
 		}
 	}
 	
@@ -589,7 +662,6 @@ class Connection extends Thread
 	}
 	public boolean isRoomNameInUse(String name)
 	{
-		ChatRoom room;
 		for (int i = 0; i < TCPServer.roomList.size(); i++)
 		{
 			room = (ChatRoom) TCPServer.roomList.get(i);
@@ -605,13 +677,27 @@ class Connection extends Thread
 	
 	public ChatRoom getRoomByName(String roomName)
 	{
-		ChatRoom room;
 		for (int i = 0; i < TCPServer.roomList.size(); i++)
 		{
 			room = (ChatRoom) TCPServer.roomList.get(i);
 			if (room.roomName.equals(roomName))
 			{
 				return room;
+			}
+		}
+		
+		return null;
+	}
+	
+	public Guest getGuestByName(String guestName)
+	{
+		Guest guest;
+		for (int i = 0; i < TCPServer.clientList.size(); i++)
+		{
+			guest = (Guest) TCPServer.clientList.get(i);
+			if (guest.guestId.equals(guestName))
+			{
+				return guest;
 			}
 		}
 		

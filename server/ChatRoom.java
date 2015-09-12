@@ -33,6 +33,12 @@ public class ChatRoom {
 		roomGuests.remove(guest);
 		roomGuestIds.remove(guest.guestId);
 		guest.setRoomMembership(null);
+		
+		if ((owner.equals("")) && (roomGuests.size() == 0))
+		{
+			TCPServer.roomList.remove(this);
+			System.gc();
+		}
 	}
 	
 	public List getRoomGuestList()
