@@ -52,14 +52,15 @@ public class TCPClient
 			{
 				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
 													
-				System.out.println("Sending data...");	
+				System.out.print(clientId + "> ");	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in, "UTF-8"));
 				userInput = consoleInput.readLine();
 				firstInputChar = String.valueOf(userInput.charAt(0));
 							
 				if (firstInputChar.equals("#")) //if the user input is a command
 				{
-					System.out.println("Input was a command...");
+					if (Debugger.isEnabled())
+						System.out.println("Input was a command...");
 					userInput = userInput.replace(firstInputChar, "");
 					commandArguments = userInput.split(" ");
 					switch(commandArguments[0].toLowerCase())
@@ -105,7 +106,8 @@ public class TCPClient
 				}
 				else //message from user to other guests
 				{
-					System.out.println("Input was a user message...");
+					if (Debugger.isEnabled())
+						System.out.println("Input was a user message...");
 					sendUserMessage(socket, userInput);
 				}
 			}
@@ -160,7 +162,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -178,7 +181,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -196,7 +200,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -214,7 +219,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -249,7 +255,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -267,7 +274,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -284,7 +292,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -304,7 +313,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -333,7 +343,8 @@ public class TCPClient
 	public static void sendIdentityChange(Socket aClientSocket, String identity)
 	{
 		String message = encodeJsonIdentityChange(identity);
-		System.out.println("new JSON encoded identity to be sent: " + message);
+		if (Debugger.isEnabled())
+			System.out.println("new JSON encoded identity to be sent: " + message);
 		sendMessage(aClientSocket, message);
 	}
 	
@@ -389,17 +400,21 @@ class ReceiveMessage extends Thread
 	ReceiveMessage(Socket aClientSocket) throws IOException
 	{
 		socket = aClientSocket;
-		System.out.println("Starting new client receive message thread...");
+		if (Debugger.isEnabled())
+			System.out.println("Starting new client receive message thread...");
 		start();
-		System.out.println("New client receive message thread started.");
+		if (Debugger.isEnabled())
+			System.out.println("New client receive message thread started.");
 	}
 		
 	public void run()
 	{
-		System.out.println("In run method...");
+		if (Debugger.isEnabled())
+			System.out.println("In run method...");
 		while (true)
 		{
-			System.out.println("Waiting to receive message...");
+			if (Debugger.isEnabled())
+				System.out.println("Waiting to receive message...");
 			try {
 				in = new DataInputStream(socket.getInputStream());
 				String jsonString = in.readUTF();

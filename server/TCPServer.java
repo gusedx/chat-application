@@ -323,6 +323,16 @@ class Connection extends Thread
 					processJsonMessage(in.readUTF());
 					Thread.sleep(3000);
 				}
+				catch (EOFException e)
+				{
+					ChatRoom room;
+					System.out.println("Closing connection to " + clientGuest.guestId);
+					clientGuest.guestSocket.close();
+					room = clientGuest.getRoomMembership();
+					room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
+					Thread.currentThread().interrupt();
+					break;
+				}
 				catch (InterruptedException e)
 				{
 //					Thread.currentThread().interrupt();
@@ -544,22 +554,18 @@ class Connection extends Thread
 						TCPServer.sendRoomChange(guest.guestSocket, id, room.roomName, "");
 					}
 					
-//					if (guest.guestId.equals(id))
-//					{
-//						guestListIterator.remove();
-						room.removeGuestFromChatRoom(clientGuest);
+					room.removeGuestFromChatRoom(clientGuest);
+					
+					try {
+						System.out.println("Closing connection to " + clientGuest.guestId);
+						clientGuest.guestSocket.close();
 						
-						try {
-							System.out.println("Closing connection to " + clientGuest.guestId);
-							clientGuest.guestSocket.close();
-							
-							Thread.currentThread().interrupt();
-							
-						} catch (IOException e) {
-							// TODO Auto-generated catch block
-							e.printStackTrace();
-						}
-//					}
+						Thread.currentThread().interrupt();
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
 					break;
 					
 				case "kick":
@@ -637,11 +643,16 @@ class Connection extends Thread
 	
 	public boolean isRequestedIdValid(String id, int minLength, int maxLength)
 	{
-		String pattern= "^[a-zA-Z0-9]*$";
-		if (!id.matches(pattern))
+		if (!String.valueOf(id.charAt(0)).matches("^[a-zA-Z]*$"))
 		{
 			return false;
 		}
+		
+		if (!id.matches("^[a-zA-Z0-9]*$"))
+		{
+			return false;
+		}
+		
 		if (id.length() < minLength || id.length() > maxLength)
 		{
 			return false;
