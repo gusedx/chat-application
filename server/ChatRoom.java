@@ -6,7 +6,6 @@ import java.util.List;
 public class ChatRoom {
 	
 	List roomGuests = new ArrayList();
-	List roomGuestIds = new ArrayList();
 	String roomName = "";
 	String owner = "";
 	
@@ -19,7 +18,6 @@ public class ChatRoom {
 	{
 		System.out.println("Adding " + guest.guestId + " to " + this.roomName);
 		roomGuests.add(guest);
-		roomGuestIds.add(guest.guestId);
 		guest.setRoomMembership(this);
 	}
 	
@@ -31,7 +29,6 @@ public class ChatRoom {
 			setRoomOwner("");
 		}
 		roomGuests.remove(guest);
-		roomGuestIds.remove(guest.guestId);
 		guest.setRoomMembership(null);
 		
 		if ((owner.equals("")) && (roomGuests.size() == 0))
@@ -53,12 +50,26 @@ public class ChatRoom {
 	
 	public List getRoomGuestIdList()
 	{
+		List roomGuestIds = new ArrayList();
+		Guest guest;
+		
+		for (int i = 0; i < roomGuests.size(); i++)
+		{
+			guest = (Guest) roomGuests.get(i);
+			roomGuestIds.add(guest.guestId);
+		}
 		return roomGuestIds;
 	}
 	
 	public void setRoomOwner(String roomOwner)
 	{
 		owner = roomOwner;
+	}
+	
+	public void updateGuestId(Guest guest, String newId)
+	{
+		roomGuests.remove(guest);
+		roomGuests.add(guest);
 	}
 
 }

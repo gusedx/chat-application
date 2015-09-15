@@ -391,11 +391,16 @@ class Connection extends Thread
 						while (roomListIterator.hasNext())
 						{
 							room = roomListIterator.next();
+							
 							if (room.owner.equals(clientGuest.guestId))
 							{
-								room.owner = value;
+								room.setRoomOwner(value);
 							}
 						}
+						
+						room = clientGuest.getRoomMembership();
+						room.updateGuestId(clientGuest, value);
+						
 						//send the new id to all the clients:
 						Iterator<Guest> clientListIterator = TCPServer.clientList.iterator();
 						while (clientListIterator.hasNext())

@@ -492,7 +492,7 @@ class ReceiveMessage extends Thread
 					{
 						guest = guestList.get(i).toString();
 						guests = guests + " " + guest;
-						System.out.println("guest = " + guest + " owner = " + owner);
+//						System.out.println("guest = " + guest + " owner = " + owner);
 						if (guest.equals(owner))
 						{
 							guests = guests + "*";
