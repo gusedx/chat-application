@@ -356,7 +356,6 @@ class Connection extends Thread
 	{	
 		String value = null;
 		
-		
 		JSONParser parser = new JSONParser();
 		ContainerFactory containerFactory = new ContainerFactory()
 		{
@@ -454,41 +453,28 @@ class Connection extends Thread
 					
 					String formerRoomName = clientGuest.getRoomMembership().roomName; 
 					
-					moveRooms(clientGuest, formerRoomName, value);
-//					Guest receivingGuest;
-//					String formerRoomName = clientGuest.getRoomMembership().roomName; 
-//					ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
-//					
-//					if (isRoomNameInUse(value))
-//					{
-//						roomArray[0] = clientGuest.memberRoom; //former room
-//						roomArray[1] = getRoomByName(value); //new room
-//						
-//						roomArray[0].removeGuestFromChatRoom(clientGuest);
-//						roomArray[1].addGuestToChatRoom(clientGuest);
-//						
-//						//send RoomChange message to all clients currently in the requesting client's current room and requesting client's requested room:
-//						for (int i = 0; i < roomArray.length; i++)
-//						{
-//							Iterator<Guest> guestListIterator = roomArray[i].getRoomGuestList().iterator();
-//							while (guestListIterator.hasNext())
-//							{
-//								receivingGuest = guestListIterator.next();
-//								TCPServer.sendRoomChange(receivingGuest.guestSocket, clientGuest.guestId, formerRoomName, value);
-//							}
-//						}
-//						
-//						if (value.equals("MainHall"))
-//						{
-//							TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, roomArray[1]);
-//							TCPServer.sendRoomList(clientGuest.guestSocket);
-//						}
-//					}
-//					else
-//					{
-//						//send RoomChange message only to the requesting client:
-//						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
-//					}
+					
+					
+					
+					Calendar calendarCurrentTime = Calendar.getInstance(); // gets a calendar using the default time zone and locale.
+					room = getRoomByName(value);
+									
+					//if client is in the list of kicked out users for the room and current time is less than time when user can re-join the room:
+					if ((room.kickedUsers.containsKey(clientGuest)) && (calendarCurrentTime.getTime().before(room.kickedUsers.get(clientGuest).getTime())))
+					{
+						//Change not allowed (kick out time not yet elapsed): send RoomChange message only to the requesting client:
+						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
+					}
+					else
+					{
+						//move is allowed:
+						moveRooms(clientGuest, formerRoomName, value);
+						if (room.kickedUsers.containsKey(clientGuest))
+						{
+							room.clearKickedUser(clientGuest);
+						}
+					}
+
 					break;
 				case "who":
 					key = "roomid";
@@ -576,6 +562,15 @@ class Connection extends Thread
 					
 					if (clientGuest.guestId.equals(getRoomByName(value).owner)) //if the client is the owner of the room:
 					{
+						//set the time when the user is able to re-join the room that it is being kicked out of:
+						key = "time";
+						String timeOffRoom = json.getOrDefault(key, null).toString();
+						Calendar calendarFutureTime = Calendar.getInstance();
+						System.out.println(calendarFutureTime.getTime());
+						calendarFutureTime.add(Calendar.SECOND, Integer.parseInt(timeOffRoom));
+						System.out.println(calendarFutureTime.getTime());
+						getRoomByName(value).addKickedUser(getGuestByName(identity), calendarFutureTime);
+						
 						moveRooms(getGuestByName(identity), value, "MainHall");
 					}
 					break;
@@ -610,10 +605,10 @@ class Connection extends Thread
 		ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
 		
 		if (isRoomNameInUse(newRoom))
-		{
+		{			
 			roomArray[0] = targetGuest.memberRoom; //former room
 			roomArray[1] = getRoomByName(newRoom); //new room
-			
+
 			roomArray[0].removeGuestFromChatRoom(targetGuest);
 			roomArray[1].addGuestToChatRoom(targetGuest);
 			
@@ -636,7 +631,7 @@ class Connection extends Thread
 		}
 		else
 		{
-			//send RoomChange message only to the requesting client:
+			//Change not allowed: send RoomChange message only to the requesting client:
 			TCPServer.sendRoomChange(clientGuest.guestSocket, targetGuest.guestId, formerRoom, formerRoom);
 		}
 	}

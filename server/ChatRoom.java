@@ -1,11 +1,15 @@
 package comp90015.project1.gustavo.server;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 
 public class ChatRoom {
 	
 	List roomGuests = new ArrayList();
+	HashMap<Guest,Calendar> kickedUsers = new HashMap<Guest,Calendar>();
 	String roomName = "";
 	String owner = "";
 	
@@ -31,7 +35,7 @@ public class ChatRoom {
 		roomGuests.remove(guest);
 		guest.setRoomMembership(null);
 		
-		if ((owner.equals("")) && (roomGuests.size() == 0))
+		if ((!this.roomName.equals("MainHall")) && (owner.equals("")) && (roomGuests.size() == 0))
 		{
 			TCPServer.roomList.remove(this);
 			System.gc();
@@ -70,6 +74,17 @@ public class ChatRoom {
 	{
 		roomGuests.remove(guest);
 		roomGuests.add(guest);
+	}
+	
+	public void addKickedUser(Guest guest, Calendar dateCanJoinAgain)
+	{
+		kickedUsers.put(guest, dateCanJoinAgain);
+	}
+	
+	public void clearKickedUser(Guest guest)
+	{
+		//remove user from the list of kicked out users
+		kickedUsers.remove(guest);
 	}
 
 }
