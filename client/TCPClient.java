@@ -33,7 +33,23 @@ public class TCPClient
 			hostname = args[0];
 			if (args.length > 1)
 			{
-				serverPort = Integer.parseInt(args[1]);
+				if (args[1].equals("-p"))
+				{
+					if (args.length > 2)
+					{
+						serverPort = Integer.parseInt(args[2]);
+					}
+					else
+					{
+						System.out.println("Usage: java -jar chatclient.jar hostname [-p port]");
+						System.exit(0);
+					}
+				}
+				else
+				{
+					System.out.println("Usage: java -jar chatclient.jar hostname [-p port]");
+					System.exit(0);
+				}
 			}
 			
 			System.out.println("Attempting to connect to host " + hostname + " on port " + serverPort);

@@ -27,7 +27,23 @@ public class TCPServer
 			
 			if (args.length > 0)
 			{
-				serverPort = Integer.parseInt(args[0]);
+				if (args[0].equals("-p"))
+				{
+					if (args.length > 1)
+					{
+						serverPort = Integer.parseInt(args[1]);
+					}
+					else
+					{
+						System.out.println("Usage: java -jar chatserver.jar [-p port]");
+						System.exit(0);
+					}
+				}
+				else
+				{
+					System.out.println("Usage: java -jar chatserver.jar [-p port]");
+					System.exit(0);
+				}
 			}
 
 			ServerSocket listenSocket = new ServerSocket(serverPort); 
