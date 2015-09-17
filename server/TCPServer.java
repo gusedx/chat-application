@@ -248,27 +248,20 @@ public class TCPServer
 	{
 		String message = encodeJsonEchoMessageToClient(senderGuest.guestId, decodedMessage);
 		System.out.println("message to echo: " + message);
-		
-//		ChatRoom room;
+
 		Guest receivingGuest;
 		
-//		//echo the received message to each guest (other than the sender) that is a member of a room that the sender is a member of:
-//		Iterator<ChatRoom> roomListIterator = senderGuest.getRoomMemberships().iterator();
-//		while (roomListIterator.hasNext())
-//		{
-//			room = roomListIterator.next();
-			System.out.println("Relaying message to members of room " + senderGuest.memberRoom.roomName);
-			Iterator<Guest> guestListIterator = senderGuest.memberRoom.getRoomGuestList().iterator();
-			while (guestListIterator.hasNext())
-			{
-				receivingGuest = guestListIterator.next();
-				if (receivingGuest.guestId != senderGuest.guestId)
-				{
-					System.out.println("Relaying message to " + receivingGuest.guestId);
-					sendMessage(receivingGuest.guestSocket, message);
-				}
-			}
-//		}
+		System.out.println("Relaying message to members of room " + senderGuest.memberRoom.roomName);
+		Iterator<Guest> guestListIterator = senderGuest.memberRoom.getRoomGuestList().iterator();
+		while (guestListIterator.hasNext())
+		{
+			receivingGuest = guestListIterator.next();
+//			if (receivingGuest.guestId != senderGuest.guestId)
+//			{ //do not relay message to sender of message:
+				System.out.println("Relaying message to " + receivingGuest.guestId);
+				sendMessage(receivingGuest.guestSocket, message);
+//			}
+		}
 	}
 }
 
