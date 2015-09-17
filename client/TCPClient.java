@@ -50,7 +50,8 @@ public class TCPClient
 			
 			while (true)
 			{
-				DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+				//DataOutputStream out = new DataOutputStream(socket.getOutputStream());
+				//OutputStreamWriter out = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
 													
 				System.out.print(clientId + "> ");	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in, "UTF-8"));
@@ -324,9 +325,10 @@ public class TCPClient
 		DataOutputStream out;
 		
 		try {
-			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(message + "\n");
-			out.flush();
+//			out = new DataOutputStream(aClientSocket.getOutputStream());
+			OutputStreamWriter out1 = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
+			out1.write(message + "\n");
+			out1.flush();
 			
 		} catch (IOException e) {
 			System.out.println("readline: " + e.getMessage());
@@ -409,21 +411,25 @@ class ReceiveMessage extends Thread
 		
 	public void run()
 	{
-		if (Debugger.isEnabled())
-			System.out.println("In run method...");
-		while (true)
-		{
+		try {
 			if (Debugger.isEnabled())
-				System.out.println("Waiting to receive message...");
-			try {
-				in = new DataInputStream(socket.getInputStream());
-				String jsonString = in.readUTF();
-				processJsonMessage(jsonString);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} //TODO: SET THE PROMPT INSTEAD OF JUST DISPLAYING MESSAGE IN SCREEN (DO THIS FROM DECODE FUNCTION?)
-			//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
+				System.out.println("In run method...");
+			BufferedReader in;
+	
+				in = new BufferedReader( new InputStreamReader(socket.getInputStream(), "UTF-8"));
+			
+			String jsonString;
+			
+			while((jsonString = in.readLine()) != null)
+			{
+				if (Debugger.isEnabled())
+					System.out.println("Waiting to receive message...");
+					processJsonMessage(jsonString);
+							//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
+			}
+		} catch (IOException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
 		}
 	}
 	
