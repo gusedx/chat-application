@@ -69,10 +69,6 @@ public class TCPServer
 				sendRoomContentsMessage(clientSocket, room);
 				System.out.println("Room contents message sent to " + guest.guestId);
 				
-				//USING RUNNABLE:
-				//Thread t = new Thread(new Connection(socket));
-				//t.start();
-				
 				new Connection(guest);
 				System.out.println("New connection thread started, will start listening loop again...");
 			}

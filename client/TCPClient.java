@@ -19,6 +19,7 @@ public class TCPClient
 	public static String hostname = "";
 	public static Socket socket = null;
 	public static String newRoomName = "";
+	public static String myRoom = "";
 
 	public static void main(String args[])
 	{	
@@ -66,10 +67,10 @@ public class TCPClient
 			
 			while (true)
 			{
-				//DataOutputStream out = new DataOutputStream(socket.getOutputStream());
-				//OutputStreamWriter out = new OutputStreamWriter(socket.getOutputStream(), "UTF-8");
-													
-				System.out.print(clientId + "> ");	
+				if (!myRoom.equals(""))
+				{
+					System.out.print("[" + myRoom + "] " + clientId + "> ");
+				}	
 				BufferedReader consoleInput = new BufferedReader( new InputStreamReader(System.in, "UTF-8"));
 				userInput = consoleInput.readLine();
 				firstInputChar = String.valueOf(userInput.charAt(0));
@@ -533,6 +534,7 @@ class ReceiveMessage extends Thread
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
 					myRoom = value;
+					TCPClient.myRoom = myRoom;
 					
 					key = "identities";
 					String guests = "";
@@ -598,6 +600,7 @@ class ReceiveMessage extends Thread
 					formerRoom = json.getOrDefault(key, null).toString();
 					key = "roomid";
 					newRoom = json.getOrDefault(key, null).toString();
+					TCPClient.myRoom = newRoom;
 					key = "identity";
 					identity = json.getOrDefault(key, null).toString();
 					
@@ -606,7 +609,7 @@ class ReceiveMessage extends Thread
 						System.out.println(identity + " leaves " + formerRoom);
 						if ((identity.equals(TCPClient.clientId)) && (newRoom.equals("")))
 						{
-							System.out.println("Closing the connection to the server and exiting.");
+							System.out.println("Disconnected from " + TCPClient.hostname);
 							TCPClient.closeConnection();
 							System.exit(0);
 						}
