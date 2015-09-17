@@ -79,12 +79,10 @@ public class TCPServer
 	}
 	
 	public static void sendMessage(Socket aClientSocket, String message)
-	{
-		DataOutputStream out;
-		
+	{	
 		try {
-			out = new DataOutputStream(aClientSocket.getOutputStream());
-			out.writeUTF(message + "\n");
+			OutputStreamWriter out = new OutputStreamWriter(aClientSocket.getOutputStream(), "UTF-8");
+			out.write(message + "\n");
 			out.flush();
 			
 		} catch (IOException e) {
@@ -277,7 +275,6 @@ public class TCPServer
 class Connection extends Thread
 {
 	DataInputStream in;
-	DataOutputStream out;
 	Guest clientGuest;
 	ChatRoom room;
 	
@@ -285,8 +282,6 @@ class Connection extends Thread
 	{
 		try
 		{
-//			in = new DataInputStream(clientSocket.getInputStream());
-//			out = new DataOutputStream(clientSocket.getOutputStream());
 			clientGuest = guest;
 			
 			System.out.println("Starting new server thread...");
@@ -308,48 +303,48 @@ class Connection extends Thread
 	}
 	
 	public void run()
-	{
-		System.out.println("In run method...");
-		while (true)
+	{			
+		try
 		{
+			System.out.println("In run method...");
+
 			String decodedMessage = null;
 			
 			System.out.println("Waiting for encoded JSON message...");
 			
-			try {
-				in = new DataInputStream(clientGuest.guestSocket.getInputStream());
-				try
-				{
-					processJsonMessage(in.readUTF());
-					Thread.sleep(3000);
-				}
-				catch (EOFException e)
-				{
-					ChatRoom room;
-					System.out.println("Closing connection to " + clientGuest.guestId);
-					clientGuest.guestSocket.close();
-					room = clientGuest.getRoomMembership();
-					room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
-					Thread.currentThread().interrupt();
-					break;
-				}
-				catch (InterruptedException e)
-				{
-//					Thread.currentThread().interrupt();
-					return;
-				}
-				
-				System.out.println("Thread Stopped.");
-				
-				//if (msg.equals("end")) //TODO: THIS IS WHERE WE RECEIVE THE CLIENT DISCONNECT MESSAGE
-				//	break;
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+			BufferedReader in;
+			in = new BufferedReader(new InputStreamReader(clientGuest.guestSocket.getInputStream(), "UTF-8"));
+			String jsonString;
+			while ((jsonString = in.readLine()) != null)
+			{
+				processJsonMessage(jsonString);
+				Thread.sleep(3000);
 			}
-			
-			System.out.println("Decoded Message received: " + decodedMessage);
 		}
+		catch (EOFException e)
+		{
+			ChatRoom room;
+			System.out.println("Closing connection to " + clientGuest.guestId);
+			try {
+				clientGuest.guestSocket.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			room = clientGuest.getRoomMembership();
+			room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
+			Thread.currentThread().interrupt();
+		}
+		catch (InterruptedException e)
+		{
+//					Thread.currentThread().interrupt();
+			return;
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		System.out.println("Thread Stopped.");
 	}
 	
 	public void processJsonMessage(String jsonString)
@@ -452,9 +447,6 @@ class Connection extends Thread
 					value = json.getOrDefault(key, null).toString();
 					
 					String formerRoomName = clientGuest.getRoomMembership().roomName; 
-					
-					
-					
 					
 					Calendar calendarCurrentTime = Calendar.getInstance(); // gets a calendar using the default time zone and locale.
 					room = getRoomByName(value);
