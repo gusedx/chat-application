@@ -440,10 +440,26 @@ class ReceiveMessage extends Thread
 			{
 				if (Debugger.isEnabled())
 					System.out.println("Waiting to receive message...");
-					processJsonMessage(jsonString);
-							//SetPrompt(decodedMessage); //TODO: CHECK TYPE OF MESSAGE AND CALL SETPROMPT IF APPROPRIATE
+				processJsonMessage(jsonString);
+				Thread.sleep(3000);
 			}
-		} catch (IOException e1) {
+		}
+		catch (EOFException e)
+		{
+			try {
+				System.out.println("Closing connection to " + TCPClient.hostname);
+				socket.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			Thread.currentThread().interrupt();
+		} 
+		catch (InterruptedException e)
+		{
+			return;
+		}
+		catch (IOException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}

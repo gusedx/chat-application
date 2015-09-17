@@ -299,15 +299,7 @@ class Connection extends Thread
 		}
 		finally
 		{
-//			try
-//			{
-//				System.out.println("Closing socket for " + aClientSocket.getInetAddress().toString());
-//				clientSocket.close();
-//			}
-//			catch (IOException e)
-//			{
-//				
-//			}
+
 		}
 	}
 	
@@ -348,7 +340,8 @@ class Connection extends Thread
 		{
 //					Thread.currentThread().interrupt();
 			return;
-		} catch (IOException e) {
+		} 
+		catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
