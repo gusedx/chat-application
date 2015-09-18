@@ -604,26 +604,33 @@ class ReceiveMessage extends Thread
 					key = "identity";
 					identity = json.getOrDefault(key, null).toString();
 					
-					if ((!identity.equals(TCPClient.clientId)) || (!newRoom.equals(formerRoom))) //request was for another client or was successful
+					if (formerRoom.equals("") && !newRoom.equals(""))
 					{
-						System.out.println(identity + " leaves " + formerRoom);
-						if ((identity.equals(TCPClient.clientId)) && (newRoom.equals("")))
+						System.out.println(identity + " moves to " + newRoom);
+					}
+					else
+					{
+						if ((!identity.equals(TCPClient.clientId)) || (!newRoom.equals(formerRoom))) //request was for another client or was successful
 						{
-							System.out.println("Disconnected from " + TCPClient.hostname);
-							TCPClient.closeConnection();
-							System.exit(0);
-						}
-						else
-						{
-							if (!newRoom.equals(""))
+							if ((identity.equals(TCPClient.clientId)) && (newRoom.equals("")))
 							{
-								System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+								System.out.println(identity + " leaves " + formerRoom);
+								System.out.println("Disconnected from " + TCPClient.hostname);
+								TCPClient.closeConnection();
+								System.exit(0);
+							}
+							else
+							{
+								if (!newRoom.equals(""))
+								{
+									System.out.println(identity + " moved from " + formerRoom + " to " + newRoom);
+								}
 							}
 						}
-					}
-					else //request was not successful
-					{
-						System.out.println("The requested room is invalid or non existent.");
+						else //request was not successful
+						{
+							System.out.println("The requested room is invalid or non existent.");
+						}
 					}
 					
 					break;

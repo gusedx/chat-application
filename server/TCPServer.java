@@ -61,10 +61,19 @@ public class TCPServer
 				
 				sendNewClientId(guest, guest.guestId, "");
 				clientList.add(guest);
-				//System.out.println("client list size: " + clientList.size());
-				
+					
 				room.addGuestToChatRoom(guest); //add new guest to default chat room 
-				//TODO: SEND ROOMCHANGE MESSAGE TO ALL CLIENTS IN THE MAINHALL
+				
+				//SEND ROOMCHANGE MESSAGE TO ALL CLIENTS IN THE MAINHALL:
+				Guest guestInMainHall;
+				Iterator<Guest> guestListIterator = room.getRoomGuestList().iterator();
+				while (guestListIterator.hasNext())
+				{
+					guestInMainHall = guestListIterator.next();
+					TCPServer.sendRoomChange(guestInMainHall.guestSocket, guestId, "", "MainHall");
+				}			
+				
+				
 				System.out.println("Sending MainHall room contents message to " + guest.guestId);
 				sendRoomContentsMessage(clientSocket, room);
 				System.out.println("Room contents message sent to " + guest.guestId);
