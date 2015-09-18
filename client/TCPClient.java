@@ -55,13 +55,10 @@ public class TCPClient
 			
 			System.out.println("Attempting to connect to host " + hostname + " on port " + serverPort);
 			
-			//socket = new Socket(args[0], serverPort);
 			socket = new Socket();
-//			System.out.println("Client local port: " + socket.getLocalPort());
 			socket.connect(new InetSocketAddress(hostname, serverPort), 10000);
 			
 			ReceiveMessage receivedMessage = new ReceiveMessage(socket);
-//			receivedMessage.start();
 			
 			sendRequestList(socket);
 			
@@ -256,7 +253,8 @@ public class TCPClient
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println(jsonText);
+		if (Debugger.isEnabled())
+			System.out.println(jsonText);
 		
 		return jsonText;
 	}
@@ -471,25 +469,9 @@ class ReceiveMessage extends Thread
 		String value = null;
 		
 		JSONParser parser = new JSONParser();
-//		ContainerFactory containerFactory = new ContainerFactory()
-//		{
-//			public List creatArrayContainer()
-//			{
-//				return new LinkedList();
-//			}
-//
-//			public Map createObjectContainer()
-//			{
-//				return new LinkedHashMap();
-//			}
-//
-//		};
 
 		try
-		{
-//			Map json = (Map)parser.parse(jsonString, containerFactory);
-//			Iterator iter = json.entrySet().iterator();
-			
+		{		
 			JSONObject json = (JSONObject) parser.parse(jsonString);
 
 			String key = "";
@@ -547,7 +529,6 @@ class ReceiveMessage extends Thread
 					{
 						guest = guestList.get(i).toString();
 						guests = guests + " " + guest;
-//						System.out.println("guest = " + guest + " owner = " + owner);
 						if (guest.equals(owner))
 						{
 							guests = guests + "*";

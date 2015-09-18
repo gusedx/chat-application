@@ -7,6 +7,9 @@ import java.util.*;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONArray;
 import org.json.simple.parser.ParseException;
+
+import comp90015.project1.gustavo.client.Debugger;
+
 import org.json.simple.parser.*;
 import org.json.simple.*;
 
@@ -73,7 +76,6 @@ public class TCPServer
 					TCPServer.sendRoomChange(guestInMainHall.guestSocket, guestId, "", "MainHall");
 				}			
 				
-				
 				System.out.println("Sending MainHall room contents message to " + guest.guestId);
 				sendRoomContentsMessage(clientSocket, room);
 				System.out.println("Room contents message sent to " + guest.guestId);
@@ -115,7 +117,8 @@ public class TCPServer
 	public static void sendNewClientId(Guest guest, String newId, String formerId)
 	{
 		String message = encodeJsonNewIdentityMessage(newId, formerId);
-		System.out.println("Encoded new identity message: " + message);
+		if (Debugger.isEnabled())
+			System.out.println("Encoded new identity message: " + message);
 		sendMessage(guest.guestSocket, message);
 	}
 	
@@ -191,7 +194,8 @@ public class TCPServer
 			e.printStackTrace();
 		}
 		String jsonText = out.toString();
-		System.out.println("Encoded room contents message: " + jsonText);
+		if (Debugger.isEnabled())
+			System.out.println("Encoded room contents message: " + jsonText);
 		
 		return jsonText;
 	}
@@ -227,7 +231,6 @@ public class TCPServer
 			JSONObject jsonEncodedRoomInformation = new JSONObject();
 			jsonEncodedRoomInformation.put("roomid",room.roomName);
 			jsonEncodedRoomInformation.put("count", new Integer(room.getNumberOfGuests()));
-			//String jsonEncodedRoomInformation = encodeJsonRoomInformation(room.roomName, room.getNumberOfGuests());
 			roomInformationList.add(jsonEncodedRoomInformation);
 		}
 		
@@ -277,11 +280,8 @@ public class TCPServer
 		while (guestListIterator.hasNext())
 		{
 			receivingGuest = guestListIterator.next();
-//			if (receivingGuest.guestId != senderGuest.guestId)
-//			{ //do not relay message to sender of message:
-				System.out.println("Relaying message to " + receivingGuest.guestId);
-				sendMessage(receivingGuest.guestSocket, message);
-//			}
+			System.out.println("Relaying message to " + receivingGuest.guestId);
+			sendMessage(receivingGuest.guestSocket, message);
 		}
 	}
 }
@@ -343,7 +343,6 @@ class Connection extends Thread
 		}
 		catch (InterruptedException e)
 		{
-//					Thread.currentThread().interrupt();
 			return;
 		} 
 		catch (IOException e) {
@@ -485,8 +484,6 @@ class Connection extends Thread
 					else
 					{
 						System.out.println("Room name " + value + " does not exist.");
-						//TODO: SEND ROOMCONTENTSMESSAGE WITH EMPTY LIST AND EMPTY OWNER (HOW TO PASS ROOM NAME TO SEND FUNCTION?)
-						//TCPServer.sendRoomContentsMessage(clientGuest.guestSocket, null);
 					}
 					break;
 					
@@ -578,18 +575,6 @@ class Connection extends Thread
 					//TODO: ADD ERROR HANDLING
 					break;
 			}
-			//value = json.getOrDefault(key, null).toString();
-
-			//DEBUG ONLY:
-			/*		    System.out.println("==iterate result==");
-		    while(iter.hasNext()){
-		      Map.Entry entry = (Map.Entry)iter.next();
-		      System.out.println(entry.getKey() + "=>" + entry.getValue());
-		    }*/
-
-			/*		    System.out.println("==toJSONString()==");
-		    System.out.println(JSONValue.toJSONString(json));*/
-
 		}
 		catch (ParseException pe)
 		{
@@ -600,7 +585,6 @@ class Connection extends Thread
 	public void moveRooms(Guest targetGuest, String formerRoom, String newRoom)
 	{
 		Guest receivingGuest;
-//		String formerRoomName = clientGuest.getRoomMembership().roomName; 
 		ChatRoom[] roomArray = new ChatRoom[2]; //stores the former and new rooms
 		
 		if (isRoomNameInUse(newRoom))
