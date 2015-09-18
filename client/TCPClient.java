@@ -139,6 +139,11 @@ public class TCPClient
 		{
 			System.out.println("readline:" + e.getMessage());
 		}
+		catch (Exception e)
+		{
+			TCPClient.closeConnection();
+			System.exit(0);
+		}
 		finally
 		{
 			if (socket != null)
@@ -459,8 +464,8 @@ class ReceiveMessage extends Thread
 			return;
 		}
 		catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
+			TCPClient.closeConnection();
+			System.exit(0);
 		}
 	}
 	

@@ -24,6 +24,8 @@ public class TCPServer
 	public static void main (String args[])
 	{
 		ChatRoom room = createNewRoom("MainHall");
+		Socket clientSocket = null;
+		Guest guest = null;
 		
 		try{
 			int serverPort = 4444; //default server port
@@ -55,12 +57,12 @@ public class TCPServer
 			{
 				System.out.println("Server listening for a connection on port " + serverPort); //TODO: DEBUG ONLY
 
-				Socket clientSocket = listenSocket.accept();
+				clientSocket = listenSocket.accept();
 
 				guestCount++;
 				guestId = "guest" + guestCount;
 				System.out.println("Received connection from " + guestId);
-				Guest guest = new Guest(guestId, clientSocket);
+				guest = new Guest(guestId, clientSocket);
 				
 				sendNewClientId(guest, guest.guestId, "");
 				clientList.add(guest);
@@ -83,6 +85,18 @@ public class TCPServer
 				new Connection(guest);
 				System.out.println("New connection thread started, will start listening loop again...");
 			}
+		}
+		catch (EOFException e)
+		{
+			System.out.println("Closing connection to " + guest.guestId);
+			try {
+				clientSocket.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			room.removeGuestFromChatRoom(guest); //this is needed so that the server does not later try to send messages to the client that is gone
+			Thread.currentThread().interrupt();
 		}
 		catch (IOException e)
 		{
@@ -350,6 +364,8 @@ class Connection extends Thread
 			e.printStackTrace();
 		}
 		
+		room = clientGuest.getRoomMembership();
+		room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
 		System.out.println("Thread Stopped.");
 	}
 	
