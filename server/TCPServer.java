@@ -90,7 +90,8 @@ public class TCPServer
 		}
 		catch (EOFException e)
 		{
-			System.out.println("Closing connection to " + guest.guestId);
+			if (Debugger.isEnabled())
+				System.out.println("Closing connection to " + guest.guestId);
 			try {
 				clientSocket.close();
 				GenerateUniqueId.sortedPq.offer(guest.guestNumber);
@@ -351,7 +352,8 @@ class Connection extends Thread
 		catch (EOFException e)
 		{
 			ChatRoom room;
-			System.out.println("Closing connection to " + clientGuest.guestId);
+			if (Debugger.isEnabled())
+				System.out.println("Closing connection to " + clientGuest.guestId);
 			try {
 				clientGuest.guestSocket.close();
 				GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
@@ -369,7 +371,8 @@ class Connection extends Thread
 		} 
 		catch (IOException e) {
 			ChatRoom room;
-			System.out.println("Closing connection to " + clientGuest.guestId);
+			if (Debugger.isEnabled())
+				System.out.println("Closing connection to " + clientGuest.guestId);
 			try {
 				clientGuest.guestSocket.close();
 				GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
@@ -391,7 +394,8 @@ class Connection extends Thread
 					room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone	
 				}
 				
-				System.out.println("Closing connection to " + clientGuest.guestId);
+				if (Debugger.isEnabled())
+					System.out.println("Closing connection to " + clientGuest.guestId);
 				try {
 					clientGuest.guestSocket.close();
 					GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
@@ -503,28 +507,36 @@ class Connection extends Thread
 				case "join":
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
+										
+					String formerRoomName = clientGuest.getRoomMembership().roomName;
 					
-					String formerRoomName = clientGuest.getRoomMembership().roomName; 
-					
-					Calendar calendarCurrentTime = Calendar.getInstance(); // gets a calendar using the default time zone and locale.
-					room = getRoomByName(value);
-									
-					//if client is in the list of kicked out users for the room and current time is less than time when user can re-join the room:
-					if ((room.kickedUsers.containsKey(clientGuest)) && (calendarCurrentTime.getTime().before(room.kickedUsers.get(clientGuest).getTime())))
+					if (!isRoomNameInUse(value)) //move not allowed as room id is invalid or non existent:
 					{
-						//Change not allowed (kick out time not yet elapsed): send RoomChange message only to the requesting client:
 						TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
 					}
+					
 					else
 					{
-						//move is allowed:
-						moveRooms(clientGuest, formerRoomName, value);
-						if (room.kickedUsers.containsKey(clientGuest))
+						Calendar calendarCurrentTime = Calendar.getInstance(); // gets a calendar using the default time zone and locale.
+						room = getRoomByName(value);
+										
+						//if client is in the list of kicked out users for the room and current time is less than time when user can re-join the room:
+						if ((room.kickedUsers.containsKey(clientGuest)) && (calendarCurrentTime.getTime().before(room.kickedUsers.get(clientGuest).getTime())))
 						{
-							room.clearKickedUser(clientGuest);
+							//Change not allowed (kick out time not yet elapsed): send RoomChange message only to the requesting client:
+							TCPServer.sendRoomChange(clientGuest.guestSocket, clientGuest.guestId, formerRoomName, formerRoomName);
 						}
+						else
+						{
+							//move is allowed:
+							moveRooms(clientGuest, formerRoomName, value);
+							if (room.kickedUsers.containsKey(clientGuest))
+							{
+								room.clearKickedUser(clientGuest);
+							}
+						}	
 					}
-
+					
 					break;
 				case "who":
 					key = "roomid";
@@ -591,7 +603,8 @@ class Connection extends Thread
 					room.removeGuestFromChatRoom(clientGuest);
 					
 					try {
-						System.out.println("Closing connection to " + clientGuest.guestId);
+						if (Debugger.isEnabled())
+							System.out.println("Closing connection to " + clientGuest.guestId);
 						clientGuest.guestSocket.close();
 						GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
 						

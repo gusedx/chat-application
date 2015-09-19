@@ -521,7 +521,6 @@ class ReceiveMessage extends Thread
 					key = "roomid";
 					value = json.getOrDefault(key, null).toString();
 					myRoom = value;
-					TCPClient.myRoom = myRoom;
 					
 					key = "identities";
 					String guests = "";
@@ -586,9 +585,13 @@ class ReceiveMessage extends Thread
 					formerRoom = json.getOrDefault(key, null).toString();
 					key = "roomid";
 					newRoom = json.getOrDefault(key, null).toString();
-					TCPClient.myRoom = newRoom;
 					key = "identity";
 					identity = json.getOrDefault(key, null).toString();
+					
+					if (identity.equals(TCPClient.clientId)) //if the room change message is for this client then update the prompt with the new room id
+					{
+						TCPClient.myRoom = newRoom;
+					}
 					
 					if (formerRoom.equals("") && !newRoom.equals(""))
 					{
