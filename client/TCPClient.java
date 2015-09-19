@@ -161,7 +161,8 @@ public class TCPClient
 	public static void closeConnection()
 	{
 		try {
-			System.out.println("Closing connection to " + TCPClient.hostname);
+			if (Debugger.isEnabled())
+				System.out.println("Closing connection to " + TCPClient.hostname);
 			socket.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -451,7 +452,8 @@ class ReceiveMessage extends Thread
 		catch (EOFException e)
 		{
 			try {
-				System.out.println("Closing connection to " + TCPClient.hostname);
+				if (Debugger.isEnabled())
+					System.out.println("Closing connection to " + TCPClient.hostname);
 				socket.close();
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
