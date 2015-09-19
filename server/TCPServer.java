@@ -15,8 +15,6 @@ import org.json.simple.*;
 
 public class TCPServer
 {
-
-	static int guestCount = 0; //total number of guests connected to the server
 	static String guestId;
 	static List clientList = new ArrayList();
 	static List roomList = new ArrayList();
@@ -51,18 +49,22 @@ public class TCPServer
 				}
 			}
 
-			ServerSocket listenSocket = new ServerSocket(serverPort); 
+			ServerSocket listenSocket = new ServerSocket(serverPort);
+			GenerateUniqueId uniqueId = new GenerateUniqueId();
 			
 			while (true)
 			{
-				System.out.println("Server listening for a connection on port " + serverPort); //TODO: DEBUG ONLY
+				System.out.println("Server listening for a connection on port " + serverPort);
 
 				clientSocket = listenSocket.accept();
 
-				guestCount++;
-				guestId = "guest" + guestCount;
+				Integer guestNumber = uniqueId.generateUniqueID();
+				
+				guestId = "guest" + guestNumber;
+				
 				System.out.println("Received connection from " + guestId);
 				guest = new Guest(guestId, clientSocket);
+				guest.guestNumber = guestNumber;
 				
 				sendNewClientId(guest, guest.guestId, "");
 				clientList.add(guest);
@@ -91,6 +93,8 @@ public class TCPServer
 			System.out.println("Closing connection to " + guest.guestId);
 			try {
 				clientSocket.close();
+				GenerateUniqueId.sortedPq.offer(guest.guestNumber);
+				
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -347,6 +351,7 @@ class Connection extends Thread
 			System.out.println("Closing connection to " + clientGuest.guestId);
 			try {
 				clientGuest.guestSocket.close();
+				GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
@@ -360,13 +365,40 @@ class Connection extends Thread
 			return;
 		} 
 		catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			ChatRoom room;
+			System.out.println("Closing connection to " + clientGuest.guestId);
+			try {
+				clientGuest.guestSocket.close();
+				GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+			room = clientGuest.getRoomMembership();
+			room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
+			Thread.currentThread().interrupt();
 		}
-		
-		room = clientGuest.getRoomMembership();
-		room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone
-		System.out.println("Thread Stopped.");
+		finally
+		{
+			if (clientGuest.guestSocket != null)
+			{
+				room = clientGuest.getRoomMembership();
+				if (room != null)
+				{
+					room.removeGuestFromChatRoom(clientGuest); //this is needed so that the server does not later try to send messages to the client that is gone	
+				}
+				
+				System.out.println("Closing connection to " + clientGuest.guestId);
+				try {
+					clientGuest.guestSocket.close();
+					GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
+			System.out.println("Thread Stopped.");
+		}
 	}
 	
 	public void processJsonMessage(String jsonString)
@@ -557,6 +589,7 @@ class Connection extends Thread
 					try {
 						System.out.println("Closing connection to " + clientGuest.guestId);
 						clientGuest.guestSocket.close();
+						GenerateUniqueId.sortedPq.offer(clientGuest.guestNumber);
 						
 						Thread.currentThread().interrupt();
 						
@@ -588,7 +621,6 @@ class Connection extends Thread
 					break;
 				default:
 					System.out.println("Invalid message type " + type);
-					//TODO: ADD ERROR HANDLING
 					break;
 			}
 		}

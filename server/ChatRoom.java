@@ -27,18 +27,22 @@ public class ChatRoom {
 	
 	public void removeGuestFromChatRoom(Guest guest)
 	{
-		System.out.println("Removing " + guest.guestId + " from " + this.roomName);
-		if (guest.guestId.equals(owner))
+		if (roomGuests.contains(guest))
 		{
-			setRoomOwner("");
-		}
-		roomGuests.remove(guest);
-		guest.setRoomMembership(null);
-		
-		if ((!this.roomName.equals("MainHall")) && (owner.equals("")) && (roomGuests.size() == 0))
-		{
-			TCPServer.roomList.remove(this);
-			System.gc();
+			System.out.println("Removing " + guest.guestId + " from " + this.roomName);
+			if (guest.guestId.equals(owner))
+			{
+				setRoomOwner("");
+			}
+			roomGuests.remove(guest);
+			guest.setRoomMembership(null);
+			
+			//delete the room if it is not the Main Hall and it has no owner and no guests
+			if ((!this.roomName.equals("MainHall")) && (owner.equals("")) && (roomGuests.size() == 0))
+			{
+				TCPServer.roomList.remove(this);
+				System.gc();
+			}	
 		}
 	}
 	

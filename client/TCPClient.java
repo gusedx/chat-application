@@ -161,7 +161,7 @@ public class TCPClient
 	public static void closeConnection()
 	{
 		try {
-			System.out.println("Closing connection.");
+			System.out.println("Closing connection to " + TCPClient.hostname);
 			socket.close();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block

@@ -8,6 +8,7 @@ public class Guest {
 	String guestId;
 	Socket guestSocket;
 	ChatRoom memberRoom;
+	Integer guestNumber;
 	
 	Guest(String guestID, Socket clientSocket)
 	{
