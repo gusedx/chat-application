@@ -316,9 +316,11 @@ class Connection extends Thread
 		{
 			clientGuest = guest;
 			
-			System.out.println("Starting new server thread...");
+			if (Debugger.isEnabled())
+				System.out.println("Starting new server thread...");
 			this.start();
-			System.out.println("New server thread started.");
+			if (Debugger.isEnabled())
+				System.out.println("New server thread started.");
 		}
 		finally
 		{
@@ -330,7 +332,8 @@ class Connection extends Thread
 	{			
 		try
 		{
-			System.out.println("In run method...");
+			if (Debugger.isEnabled())
+				System.out.println("In run method...");
 
 			String decodedMessage = null;
 			
@@ -397,7 +400,8 @@ class Connection extends Thread
 					e1.printStackTrace();
 				}
 			}
-			System.out.println("Thread Stopped.");
+			if (Debugger.isEnabled())
+				System.out.println("Thread Stopped.");
 		}
 	}
 	
